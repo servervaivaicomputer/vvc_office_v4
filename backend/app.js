@@ -14,7 +14,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
@@ -24,11 +24,11 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-/* ── CORS ─────────────────────────────────────────── */
+/* ── CORS — Public (any origin allowed) ───────────── */
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-CSRF-Token']
 }));
 
