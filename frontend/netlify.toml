@@ -1,16 +1,46 @@
 [build]
   publish = "."
 
+# Backend API proxy → Render
+[[redirects]]
+  from = "/api/*"
+  to = "https://vvc-office-v4.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Known page routes
 [[redirects]]
   from = "/home"
   to = "/home/index.html"
   status = 200
 
 [[redirects]]
+  from = "/about"
+  to = "/about/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/workspace"
+  to = "/workspace/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/login/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+# Catch-all fallback → root index.html
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
+# Security headers
 [[headers]]
   for = "/*"
   [headers.values]
