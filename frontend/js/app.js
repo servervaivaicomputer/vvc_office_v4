@@ -4,7 +4,7 @@ const App = (function () {
   let csrfToken = null;
   let authChecked = false;
 
-  /* ── Loader Style (একবার inject হয়) ─────────────── */
+  /* ── Loader Style ──────────────────────────────── */
   var styleInjected = false;
   function injectBaseStyle() {
     if (styleInjected) return;
@@ -23,14 +23,14 @@ const App = (function () {
     document.head.appendChild(s);
   }
 
-  /* ── CSRF ─────────────────────────────────────────── */
+  /* ── CSRF ──────────────────────────────────────── */
   function getCsrf() {
     if (csrfToken) return csrfToken;
     var m = document.cookie.match(/csrf_token=([^;]+)/);
     return m ? m[1] : '';
   }
 
-  /* ── Fetch wrapper ───────────────────────────────── */
+  /* ── Fetch ─────────────────────────────────────── */
   async function api(method, path, body) {
     var opts = {
       method: method,
@@ -42,74 +42,78 @@ const App = (function () {
     return res.json();
   }
 
-  /* ── Content inject (FIXED — scripts execute হবে) ── */
+  /* ══════════════════════════════════════════════════
+     injectContent — FIXED
+     Styles → head, HTML → container, Scripts → execute
+     ══════════════════════════════════════════════════ */
   function injectContent(container, html) {
     container.innerHTML = '';
 
     var tmp = document.createElement('div');
     tmp.innerHTML = html;
 
-    /* style tags collect */
+    /* ── 1. Styles collect করো ── */
     var styles = [];
-    tmp.querySelectorAll('style').forEach(function (old) {
-      styles.push(old.textContent);
-      old.remove();
+    tmp.querySelectorAll('style').forEach(function (el) {
+      styles.push(el.textContent);
     });
 
-    /* script tags collect */
+    /* ── 2. Scripts collect করো ── */
     var inlineScripts = [];
     var externalScripts = [];
-    tmp.querySelectorAll('script').forEach(function (old) {
-      if (old.src) {
-        externalScripts.push(old.getAttribute('src'));
+    tmp.querySelectorAll('script').forEach(function (el) {
+      if (el.getAttribute('src')) {
+        externalScripts.push(el.getAttribute('src'));
       } else {
-        inlineScripts.push(old.textContent);
+        inlineScripts.push(el.textContent);
       }
-      old.remove();
     });
 
-    /* styles → head */
-    styles.forEach(function (content) {
+    /* ── 3. Style + Script tags remove করো ── */
+    tmp.querySelectorAll('style, script').forEach(function (el) {
+      el.remove();
+    });
+
+    /* ── 4. Styles → document.head ── */
+    styles.forEach(function (css) {
       var s = document.createElement('style');
-      s.textContent = content;
+      s.textContent = css;
       s.setAttribute('data-pg', '1');
       document.head.appendChild(s);
     });
 
-    /* HTML (without scripts/styles) */
+    /* ── 5. HTML → container (styles/scripts ছাড়া) ── */
     container.innerHTML = tmp.innerHTML;
 
-    /* external scripts → execute */
+    /* ── 6. External scripts → load ── */
     externalScripts.forEach(function (src) {
       var s = document.createElement('script');
       s.src = src;
-      document.body.appendChild(s);
+      s.setAttribute('data-pg', '1');
+      document.head.appendChild(s);
     });
 
-    /* inline scripts → execute */
+    /* ── 7. Inline scripts → execute (new Function) ── */
     inlineScripts.forEach(function (code) {
-      var s = document.createElement('script');
-      s.textContent = code;
-      document.body.appendChild(s);
+      try {
+        (new Function(code))();
+      } catch (e) {
+        console.error('[App] Script error:', e);
+      }
     });
   }
 
-  /* ── পুরোনো injected style remove ──────────────── */
+  /* ── Injected style clear ──────────────────────── */
   function clearInjectedStyles() {
     document.querySelectorAll('style[data-pg]').forEach(function (s) { s.remove(); });
   }
 
-  /* ── পুরোনো injected script remove ─────────────── */
-  function clearInjectedScripts() {
-    document.querySelectorAll('script[data-pg]').forEach(function (s) { s.remove(); });
-  }
-
-  /* ── Centered loader ─────────────────────────────── */
+  /* ── Loader ────────────────────────────────────── */
   function showLoader(c) {
     c.innerHTML = '<div class="pg-loader"><span></span><span></span><span></span></div>';
   }
 
-  /* ── Access denied ──────────────────────────────── */
+  /* ── Access denied ─────────────────────────────── */
   function showDenied(c, msg) {
     c.innerHTML =
       '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem">' +
@@ -119,14 +123,14 @@ const App = (function () {
       '</div>';
   }
 
-  /* ── Slug ────────────────────────────────────────── */
+  /* ── Slug ──────────────────────────────────────── */
   function getSlug() {
     var p = window.location.pathname.replace(/^\/+|\/+$/g, '');
     if (!p || p === 'home') return 'home';
     return p;
   }
 
-  /* ── Auth ────────────────────────────────────────── */
+  /* ── Auth ──────────────────────────────────────── */
   async function ensureAuth() {
     if (!csrfToken) {
       var r = await api('GET', '/auth/csrf');
@@ -163,10 +167,8 @@ const App = (function () {
     var ok = await ensureAuth();
     if (!ok) { window.location.href = '/login'; return; }
 
-    /* পুরোনো inject clear */
     clearInjectedStyles();
 
-    /* backend fetch */
     showLoader(c);
     var res = await api('GET', '/pages/' + slug);
     if (!res.success) { showDenied(c, res.error); return; }
