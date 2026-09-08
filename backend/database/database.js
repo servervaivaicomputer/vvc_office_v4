@@ -1,9 +1,19 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('FATAL: SUPABASE_URL or SUPABASE_SERVICE_KEY is missing.');
+  console.error('SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING');
+  console.error('SUPABASE_SERVICE_KEY:', supabaseKey ? 'SET' : 'MISSING');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /* ═══════════════ Users ═══════════════ */
 
