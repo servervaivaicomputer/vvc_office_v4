@@ -13,16 +13,19 @@ const {
    AUTH
    ═══════════════════════════════════════════════════ */
 
-/* ── CSRF bootstrap (called on page load) ─────────── */
+/* ── CSRF bootstrap ───────────────────────────────── */
 router.get('/auth/csrf', (_req, res) => {
   const t = generateCsrfToken();
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.cookie('csrf_token', t, {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 864e5,
     path: '/'
   });
+
   res.json({ success: true, csrfToken: t });
 });
 
@@ -68,7 +71,7 @@ router.post('/auth/login', verifyCsrf, async (req, res) => {
   }
 });
 
-/* ── Admin login (separate endpoint) ──────────────── */
+/* ── Admin login ──────────────────────────────────── */
 router.post('/auth/admin-login', verifyCsrf, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -78,14 +81,20 @@ router.post('/auth/admin-login', verifyCsrf, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Credentials required' });
 
     const user = await db.findUserByUsername(username.trim());
-    if (!user) { await db.logFailedAttempt(username, ip, device); return res.status(401).json({ success: false, error: 'Invalid admin credentials' }); }
-    if (user.is_blocked) return res.status(403).json({ success: false, error: 'Account is blocked' });
+
+    if (!user) {
+      await db.logFailedAttempt(username, ip, device);
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials — user not found' });
+    }
+    if (user.is_blocked)
+      return res.status(403).json({ success: false, error: 'Account is blocked' });
     if (!user.roles?.is_admin) {
       await db.logActivity(user.id, 'ADMIN_LOGIN_DENIED', 'Non-admin admin-login attempt', ip, device);
-      return res.status(403).json({ success: false, error: 'Admin access required' });
+      return res.status(403).json({ success: false, error: 'Admin access required — your role is: ' + (user.roles?.name || 'unknown') });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
+
     if (!valid) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await db.updateLoginAttempts(user.id, attempts);
@@ -95,7 +104,7 @@ router.post('/auth/admin-login', verifyCsrf, async (req, res) => {
         await db.logActivity(user.id, 'AUTO_BLOCKED', `Blocked after ${MAX_FAILED} failed attempts`, ip, device);
         return res.status(403).json({ success: false, error: 'Account blocked.' });
       }
-      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials — wrong password' });
     }
 
     await db.resetLoginAttempts(user.id);
@@ -105,7 +114,7 @@ router.post('/auth/admin-login', verifyCsrf, async (req, res) => {
     setAuthCookies(res, user);
     res.json({ success: true, data: { user: { ...safeUser(user), isAdmin: true } } });
   } catch (err) {
-    console.error('Admin login error:', err);
+    console.error('[ADMIN LOGIN] Error:', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
@@ -156,6 +165,44 @@ router.get('/pages/:slug', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Page error:', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/* ═══════════════════════════════════════════════════
+   TEMPORARY SEED — প্রথম admin তৈরি, পরে মুছে ফেলো
+   ═══════════════════════════════════════════════════ */
+
+router.post('/seed/admin', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, error: 'username, email, password required' });
+    }
+
+    const existing = await db.findUserByUsername(username);
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'User already exists' });
+    }
+
+    const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+    const hash = await bcrypt.hash(password, rounds);
+
+    const user = await db.createUser({
+      username,
+      email,
+      passwordHash: hash,
+      roleId: 1
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin created successfully. DELETE this seed route now!',
+      data: { id: user.id, username: user.username, role: 'admin' }
+    });
+  } catch (err) {
+    console.error('Seed error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -301,9 +348,23 @@ router.get('/admin/stats', authenticateAdmin, async (_req, res) => {
 function setAuthCookies(res, user) {
   const token = generateToken(user);
   const csrf = generateCsrfToken();
-  const opts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 864e5, path: '/' };
-  res.cookie('token', token, opts);
-  res.cookie('csrf_token', csrf, { ...opts, httpOnly: false });
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 864e5,
+    path: '/'
+  });
+
+  res.cookie('csrf_token', csrf, {
+    httpOnly: false,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 864e5,
+    path: '/'
+  });
 }
 
 function safeUser(u) {
@@ -316,40 +377,5 @@ function safeUser(u) {
     createdAt: u.created_at
   };
 }
-
-/* ═══ TEMPORARY SEED — প্রথম admin তৈরি করার জন্য, পরে মুছে ফেলো ═══ */
-router.post('/seed/admin', async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({ success: false, error: 'username, email, password required' });
-    }
-
-    const existing = await db.findUserByUsername(username);
-    if (existing) {
-      return res.status(409).json({ success: false, error: 'User already exists' });
-    }
-
-    const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-    const hash = await bcrypt.hash(password, rounds);
-
-    const user = await db.createUser({
-      username,
-      email,
-      passwordHash: hash,
-      roleId: 1
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Admin created successfully. DELETE this seed route now!',
-      data: { id: user.id, username: user.username, role: 'admin' }
-    });
-  } catch (err) {
-    console.error('Seed error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 module.exports = router;
