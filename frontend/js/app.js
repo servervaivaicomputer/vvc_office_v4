@@ -5,7 +5,7 @@ const App = (function () {
   let authChecked = false;
 
   /* ── Loader Style (একবার inject হয়) ─────────────── */
-  let styleInjected = false;
+  var styleInjected = false;
   function injectBaseStyle() {
     if (styleInjected) return;
     styleInjected = true;
@@ -42,29 +42,56 @@ const App = (function () {
     return res.json();
   }
 
-  /* ── Content inject (style + script সহ) ──────────── */
+  /* ── Content inject (FIXED — scripts execute হবে) ── */
   function injectContent(container, html) {
     container.innerHTML = '';
+
     var tmp = document.createElement('div');
     tmp.innerHTML = html;
 
-    /* backend style tags → document.head এ যোগ */
+    /* style tags collect */
+    var styles = [];
     tmp.querySelectorAll('style').forEach(function (old) {
-      var s = document.createElement('style');
-      s.textContent = old.textContent;
-      s.setAttribute('data-pg', '1');
-      document.head.appendChild(s);
+      styles.push(old.textContent);
       old.remove();
     });
 
-    /* backend script tags → execute */
+    /* script tags collect */
+    var inlineScripts = [];
+    var externalScripts = [];
     tmp.querySelectorAll('script').forEach(function (old) {
-      var s = document.createElement('script');
-      if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
-      old.parentNode.replaceChild(s, old);
+      if (old.src) {
+        externalScripts.push(old.getAttribute('src'));
+      } else {
+        inlineScripts.push(old.textContent);
+      }
+      old.remove();
     });
 
+    /* styles → head */
+    styles.forEach(function (content) {
+      var s = document.createElement('style');
+      s.textContent = content;
+      s.setAttribute('data-pg', '1');
+      document.head.appendChild(s);
+    });
+
+    /* HTML (without scripts/styles) */
     container.innerHTML = tmp.innerHTML;
+
+    /* external scripts → execute */
+    externalScripts.forEach(function (src) {
+      var s = document.createElement('script');
+      s.src = src;
+      document.body.appendChild(s);
+    });
+
+    /* inline scripts → execute */
+    inlineScripts.forEach(function (code) {
+      var s = document.createElement('script');
+      s.textContent = code;
+      document.body.appendChild(s);
+    });
   }
 
   /* ── পুরোনো injected style remove ──────────────── */
@@ -72,12 +99,17 @@ const App = (function () {
     document.querySelectorAll('style[data-pg]').forEach(function (s) { s.remove(); });
   }
 
+  /* ── পুরোনো injected script remove ─────────────── */
+  function clearInjectedScripts() {
+    document.querySelectorAll('script[data-pg]').forEach(function (s) { s.remove(); });
+  }
+
   /* ── Centered loader ─────────────────────────────── */
   function showLoader(c) {
     c.innerHTML = '<div class="pg-loader"><span></span><span></span><span></span></div>';
   }
 
-  /* ── Access denied message ──────────────────────── */
+  /* ── Access denied ──────────────────────────────── */
   function showDenied(c, msg) {
     c.innerHTML =
       '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem">' +
@@ -87,14 +119,14 @@ const App = (function () {
       '</div>';
   }
 
-  /* ── Slug from URL ──────────────────────────────── */
+  /* ── Slug ────────────────────────────────────────── */
   function getSlug() {
     var p = window.location.pathname.replace(/^\/+|\/+$/g, '');
     if (!p || p === 'home') return 'home';
     return p;
   }
 
-  /* ── Auth (একবার check, cache) ─────────────────── */
+  /* ── Auth ────────────────────────────────────────── */
   async function ensureAuth() {
     if (!csrfToken) {
       var r = await api('GET', '/auth/csrf');
@@ -109,7 +141,6 @@ const App = (function () {
     return true;
   }
 
-  /* ── Reset session ──────────────────────────────── */
   function resetSession() {
     currentUser = null;
     authChecked = false;
@@ -117,31 +148,27 @@ const App = (function () {
   }
 
   /* ══════════════════════════════════════════════════
-     init() — প্রতিটি page-এ এটা call হয়
+     init()
      ══════════════════════════════════════════════════ */
   async function init() {
     var c = document.getElementById('app-content');
     if (!c) return;
 
     injectBaseStyle();
-
     var slug = getSlug();
 
-    /* login page হলে আলাদা */
     if (slug === 'login') { await initLogin(); return; }
 
-    /* auth check */
     showLoader(c);
     var ok = await ensureAuth();
     if (!ok) { window.location.href = '/login'; return; }
 
-    /* পুরোনো style clear */
+    /* পুরোনো inject clear */
     clearInjectedStyles();
 
-    /* backend থেকে fetch (প্রতিবার) */
+    /* backend fetch */
     showLoader(c);
     var res = await api('GET', '/pages/' + slug);
-
     if (!res.success) { showDenied(c, res.error); return; }
 
     injectContent(c, res.data.content);
@@ -201,7 +228,6 @@ const App = (function () {
     window.location.href = '/login';
   }
 
-  /* ── Escape ─────────────────────────────────────── */
   function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
   return { init: init, initLogin: initLogin, login: login, logout: logout, api: api, getCsrf: getCsrf, esc: esc, getSlug: getSlug };
