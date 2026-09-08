@@ -43,61 +43,79 @@ const App = (function () {
   }
 
   /* ══════════════════════════════════════════════════
-     injectContent — FINAL FIX
+     injectContent — FINAL
 
-     Browser behavior:
-     - innerHTML = html    → DOM create হয়, script execute হয় না
-     - replaceChild(script) → fresh script DOM এ insert হয়, execute হয়
+     innerHTML parser-inserted flag সমস্যা bypass করে
+     Regex দিয়ে raw HTML string থেকে style/script বের করে
+     Clean HTML innerHTML এ বসায়, script eval দিয়ে চালায়
      ══════════════════════════════════════════════════ */
   function injectContent(container, html) {
-    /* Step 1: HTML set করো (scripts won't run) */
-    container.innerHTML = html;
 
-    /* Step 2: Styles → document.head এ move করো */
-    var styles = container.querySelectorAll('style');
-    for (var i = 0; i < styles.length; i++) {
-      var ns = document.createElement('style');
-      ns.textContent = styles[i].textContent;
-      ns.setAttribute('data-pg', '1');
-      document.head.appendChild(ns);
-      styles[i].remove();
+    /* ── 1. Styles extract করো regex দিয়ে ── */
+    var styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+    var styleMatch;
+    var styleContents = [];
+    while ((styleMatch = styleRegex.exec(html)) !== null) {
+      styleContents.push(styleMatch[1]);
     }
 
-    /* Step 3: প্রতিটি script কে fresh createElement দিয়ে replace করো
-       Browser fresh createElement script execute করে */
-    var scripts = container.querySelectorAll('script');
-    var scriptsCopy = [];
-    for (var j = 0; j < scripts.length; j++) {
-      scriptsCopy.push(scripts[j]);
+    /* ── 2. Scripts extract করো regex দিয়ে ── */
+    var scriptTagRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+    var scriptMatch;
+    var inlineScripts = [];
+    var externalScripts = [];
+    while ((scriptMatch = scriptTagRegex.exec(html)) !== null) {
+      var attrs = scriptMatch[1] || '';
+      var code = scriptMatch[2] || '';
+      var srcMatch = attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+
+      if (srcMatch) {
+        externalScripts.push(srcMatch[1]);
+      } else if (code.trim()) {
+        inlineScripts.push(code);
+      }
     }
 
-    for (var k = 0; k < scriptsCopy.length; k++) {
-      var old = scriptsCopy[k];
-      var ns = document.createElement('script');
+    /* ── 3. Style + Script tags remove করো HTML থেকে ── */
+    var cleanHtml = html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .trim();
 
-      /* Copy all attributes (src, type, etc) */
-      for (var a = 0; a < old.attributes.length; a++) {
-        ns.setAttribute(old.attributes[a].name, old.attributes[a].value);
+    /* ── 4. Styles → document.head ── */
+    for (var i = 0; i < styleContents.length; i++) {
+      var s = document.createElement('style');
+      s.textContent = styleContents[i];
+      s.setAttribute('data-pg', '1');
+      document.head.appendChild(s);
+    }
+
+    /* ── 5. Clean HTML → container ── */
+    container.innerHTML = cleanHtml;
+
+    /* ── 6. External scripts load করো ── */
+    for (var j = 0; j < externalScripts.length; j++) {
+      var es = document.createElement('script');
+      es.src = externalScripts[j];
+      es.setAttribute('data-pg', '1');
+      document.head.appendChild(es);
+    }
+
+    /* ── 7. Inline scripts execute করো ── */
+    for (var k = 0; k < inlineScripts.length; k++) {
+      try {
+        /* (0, eval)(code) = indirect eval = global scope execute */
+        (0, eval)(inlineScripts[k]);
+      } catch (err) {
+        console.error('[App] Script error:', err);
       }
-
-      /* Copy inline content */
-      if (old.src || old.getAttribute('src')) {
-        ns.src = old.getAttribute('src');
-      } else {
-        ns.textContent = old.textContent;
-      }
-
-      /* Replace — this triggers execution */
-      old.parentNode.replaceChild(ns, old);
     }
   }
 
-  /* ── Clear old styles ──────────────────────────── */
+  /* ── Old styles clear ──────────────────────────── */
   function clearInjectedStyles() {
     var old = document.querySelectorAll('style[data-pg]');
-    for (var i = 0; i < old.length; i++) {
-      old[i].remove();
-    }
+    for (var i = 0; i < old.length; i++) old[i].remove();
   }
 
   /* ── Loader ────────────────────────────────────── */
