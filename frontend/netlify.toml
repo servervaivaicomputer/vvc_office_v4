@@ -34,7 +34,7 @@
   to = "/admin/index.html"
   status = 200
 
-# Catch-all fallback → root index.html
+# Catch-all fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
