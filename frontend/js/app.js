@@ -9,7 +9,7 @@ const App = (function () {
   function injectBaseStyle() {
     if (styleInjected) return;
     styleInjected = true;
-    const s = document.createElement('style');
+    var s = document.createElement('style');
     s.textContent = [
       '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
       'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; }',
@@ -26,31 +26,31 @@ const App = (function () {
   /* ── CSRF ─────────────────────────────────────────── */
   function getCsrf() {
     if (csrfToken) return csrfToken;
-    const m = document.cookie.match(/csrf_token=([^;]+)/);
+    var m = document.cookie.match(/csrf_token=([^;]+)/);
     return m ? m[1] : '';
   }
 
   /* ── Fetch wrapper ───────────────────────────────── */
   async function api(method, path, body) {
-    const opts = {
-      method,
+    var opts = {
+      method: method,
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrf() }
     };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(API_BASE + path, opts);
+    var res = await fetch(API_BASE + path, opts);
     return res.json();
   }
 
   /* ── Content inject (style + script সহ) ──────────── */
   function injectContent(container, html) {
     container.innerHTML = '';
-    const tmp = document.createElement('div');
+    var tmp = document.createElement('div');
     tmp.innerHTML = html;
 
     /* backend style tags → document.head এ যোগ */
     tmp.querySelectorAll('style').forEach(function (old) {
-      const s = document.createElement('style');
+      var s = document.createElement('style');
       s.textContent = old.textContent;
       s.setAttribute('data-pg', '1');
       document.head.appendChild(s);
@@ -59,7 +59,7 @@ const App = (function () {
 
     /* backend script tags → execute */
     tmp.querySelectorAll('script').forEach(function (old) {
-      const s = document.createElement('script');
+      var s = document.createElement('script');
       if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
       old.parentNode.replaceChild(s, old);
     });
@@ -72,7 +72,7 @@ const App = (function () {
     document.querySelectorAll('style[data-pg]').forEach(function (s) { s.remove(); });
   }
 
-  /* ── Centered loader (JavaScript দিয়ে) ─────────── */
+  /* ── Centered loader ─────────────────────────────── */
   function showLoader(c) {
     c.innerHTML = '<div class="pg-loader"><span></span><span></span><span></span></div>';
   }
@@ -109,27 +109,11 @@ const App = (function () {
     return true;
   }
 
-  /* ── Page content cache (sessionStorage) ────────── */
-  function getCached(slug) {
-    try {
-      var c = sessionStorage.getItem('pg_' + slug);
-      if (c) { var d = JSON.parse(c); if (Date.now() - d.t < 300000) return d.h; }
-    } catch (e) {}
-    return null;
-  }
-  function setCached(slug, html) {
-    try { sessionStorage.setItem('pg_' + slug, JSON.stringify({ h: html, t: Date.now() })); } catch (e) {}
-  }
-  function clearCache() {
-    try { sessionStorage.clear(); } catch (e) {}
-  }
-
   /* ── Reset session ──────────────────────────────── */
   function resetSession() {
     currentUser = null;
     authChecked = false;
     csrfToken = null;
-    clearCache();
   }
 
   /* ══════════════════════════════════════════════════
@@ -151,18 +135,15 @@ const App = (function () {
     var ok = await ensureAuth();
     if (!ok) { window.location.href = '/login'; return; }
 
-    /* cache check */
+    /* পুরোনো style clear */
     clearInjectedStyles();
-    var cached = getCached(slug);
-    if (cached) { injectContent(c, cached); return; }
 
-    /* backend থেকে fetch */
+    /* backend থেকে fetch (প্রতিবার) */
     showLoader(c);
     var res = await api('GET', '/pages/' + slug);
 
     if (!res.success) { showDenied(c, res.error); return; }
 
-    setCached(slug, res.data.content);
     injectContent(c, res.data.content);
   }
 
@@ -175,7 +156,6 @@ const App = (function () {
       var r = await api('GET', '/auth/csrf');
       if (r.csrfToken) csrfToken = r.csrfToken;
     }
-    /* already logged in → home */
     var me = await api('GET', '/auth/me');
     if (me.success) { window.location.href = '/home'; }
   }
