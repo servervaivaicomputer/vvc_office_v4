@@ -1,0 +1,227 @@
+<div class="admin-panel">
+  <div class="page-header">
+    <span class="page-badge admin-badge">Admin</span>
+    <h1>Admin Panel</h1>
+    <p class="page-subtitle">System Administration</p>
+  </div>
+
+  <div class="admin-tabs" id="admin-tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="users">Users</button>
+    <button class="tab-btn" data-tab="permissions">Permissions</button>
+    <button class="tab-btn" data-tab="views">Views</button>
+    <button class="tab-btn" data-tab="activity">Activity</button>
+    <button class="tab-btn" data-tab="failed">Failed Logins</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="stats-row" id="stats-row"></div>
+  </div>
+
+  <!-- Users -->
+  <div id="tab-users" class="tab-panel">
+    <div class="toolbar">
+      <h3>All Users</h3>
+      <button class="btn btn-sm" onclick="AdminPanel.showCreateUser()">+ Create User</button>
+    </div>
+    <div id="create-user-form" class="form-inline" style="display:none">
+      <input type="text" id="cu-username" placeholder="Username" class="input-sm">
+      <input type="email" id="cu-email" placeholder="Email" class="input-sm">
+      <input type="password" id="cu-password" placeholder="Password (min 8)" class="input-sm">
+      <select id="cu-role" class="input-sm"><option value="2">User</option><option value="1">Admin</option></select>
+      <button class="btn btn-sm btn-accent" onclick="AdminPanel.createUser()">Create</button>
+      <button class="btn btn-sm" onclick="AdminPanel.hideCreateUser()">Cancel</button>
+    </div>
+    <div class="table-wrap"><table id="users-table"><thead><tr>
+      <th>Username</th><th>Email</th><th>Role</th><th>Blocked</th><th>Failed</th><th>Last Login</th><th>Actions</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- Permissions -->
+  <div id="tab-permissions" class="tab-panel">
+    <div class="toolbar"><h3>Page Permissions</h3></div>
+    <div class="form-inline" style="margin-bottom:1rem">
+      <select id="perm-user" class="input-sm"></select>
+      <select id="perm-page" class="input-sm">
+        <option value="home">home</option><option value="about">about</option>
+        <option value="workspace">workspace</option><option value="admin">admin</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="AdminPanel.grantPerm()">Grant</button>
+      <button class="btn btn-sm btn-danger" onclick="AdminPanel.revokePerm()">Revoke</button>
+    </div>
+    <h4>User Permissions</h4>
+    <div class="table-wrap"><table id="user-perms-table"><thead><tr>
+      <th>User</th><th>Page</th><th>Granted</th><th>By</th>
+    </tr></thead><tbody></tbody></table></div>
+    <h4 style="margin-top:1rem">Role Permissions</h4>
+    <div class="table-wrap"><table id="role-perms-table"><thead><tr>
+      <th>Role</th><th>Page</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- Views -->
+  <div id="tab-views" class="tab-panel">
+    <div class="toolbar">
+      <h3>View Statistics</h3>
+      <select id="views-page" class="input-sm" onchange="AdminPanel.loadViews()">
+        <option value="">All Pages</option>
+        <option value="home">home</option><option value="about">about</option>
+        <option value="workspace">workspace</option><option value="admin">admin</option>
+      </select>
+    </div>
+    <div class="stats-row" id="view-stats-row"></div>
+    <div class="table-wrap"><table id="views-table"><thead><tr>
+      <th>Page</th><th>User</th><th>IP</th><th>Device</th><th>Time</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- Activity -->
+  <div id="tab-activity" class="tab-panel">
+    <div class="toolbar"><h3>Activity Logs</h3></div>
+    <div class="table-wrap"><table id="activity-table"><thead><tr>
+      <th>User</th><th>Action</th><th>Details</th><th>IP</th><th>Time</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- Failed Logins -->
+  <div id="tab-failed" class="tab-panel">
+    <div class="toolbar"><h3>Failed Login Attempts</h3></div>
+    <div class="table-wrap"><table id="failed-table"><thead><tr>
+      <th>Username</th><th>IP</th><th>Device</th><th>Time</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = '/api';
+  function csrf() {
+    const m = document.cookie.match(/csrf_token=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  async function api(method, url, body) {
+    const opts = { method, credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf() } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + url, opts);
+    return r.json();
+  }
+  function fmt(d) { return d ? new Date(d).toLocaleString() : '—'; }
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* Tab switching */
+  document.querySelectorAll('#admin-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#admin-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      AdminPanel['load_' + btn.dataset.tab.replace('-', '_')]();
+    });
+  });
+
+  const AdminPanel = window.AdminPanel = {};
+
+  AdminPanel.load_dashboard = async () => {
+    const { data } = await api('GET', '/admin/stats');
+    if (!data) return;
+    document.getElementById('stats-row').innerHTML =
+      statCard('Total Users', data.totalUsers) +
+      statCard('Today Views', data.views?.today || 0) +
+      statCard('7-Day Views', data.views?.sevenDays || 0) +
+      statCard('30-Day Views', data.views?.thirtyDays || 0) +
+      statCard('Blocked Users', data.blockedUsers);
+  };
+
+  AdminPanel.load_users = async () => {
+    const { data } = await api('GET', '/admin/users');
+    if (!data) return;
+    const tb = document.querySelector('#users-table tbody');
+    const { data: roles } = await api('GET', '/admin/roles');
+    window._roles = roles || [];
+    const sel = document.getElementById('perm-user');
+    if (sel) sel.innerHTML = data.map(u => '<option value="'+u.id+'">'+esc(u.username)+'</option>').join('');
+    tb.innerHTML = data.map(u => '<tr>' +
+      '<td>'+esc(u.username)+'</td><td>'+esc(u.email)+'</td>' +
+      '<td><select class="input-xs" onchange="AdminPanel.changeRole(\''+u.id+'\',this.value)">' +
+        (window._roles||[]).map(r=>'<option value="'+r.id+'"'+(r.name===u.role?' selected':'')+'>'+r.name+'</option>').join('') +
+      '</select></td>' +
+      '<td>'+(u.isBlocked?'<span class="badge badge-danger">Blocked</span>':'<span class="badge badge-success">Active</span>')+'</td>' +
+      '<td>'+u.failedLoginAttempts+'</td><td>'+fmt(u.lastLogin)+'</td>' +
+      '<td>'+(u.isBlocked
+        ?'<button class="btn btn-xs btn-accent" onclick="AdminPanel.unblockUser(\''+u.id+'\')">Unblock</button>'
+        :'<button class="btn btn-xs btn-danger" onclick="AdminPanel.blockUser(\''+u.id+'\')">Block</button>') +
+      '</td></tr>').join('');
+  };
+
+  AdminPanel.load_permissions = async () => {
+    const { data } = await api('GET', '/admin/permissions');
+    if (!data) return;
+    document.querySelector('#user-perms-table tbody').innerHTML =
+      (data.userPermissions||[]).map(p => '<tr><td>'+esc(p.users?.username||p.user_id)+'</td><td>'+esc(p.page_slug)+'</td><td>'+fmt(p.granted_at)+'</td><td>'+esc(p.granted_by||'—')+'</td></tr>').join('') || '<tr><td colspan="4">No user-specific permissions</td></tr>';
+    document.querySelector('#role-perms-table tbody').innerHTML =
+      (data.rolePermissions||[]).map(p => '<tr><td>'+esc(p.roles?.name||p.role_id)+'</td><td>'+esc(p.page_slug)+'</td></tr>').join('') || '<tr><td colspan="2">No role permissions</td></tr>';
+  };
+
+  AdminPanel.load_views = async () => {
+    const page = document.getElementById('views-page')?.value || '';
+    const { data } = await api('GET', '/admin/views?page=' + page);
+    if (!data) return;
+    document.getElementById('view-stats-row').innerHTML =
+      statCard('Today', data.stats.today) +
+      statCard('7 Days', data.stats.sevenDays) +
+      statCard('30 Days', data.stats.thirtyDays);
+    document.querySelector('#views-table tbody').innerHTML =
+      (data.views||[]).map(v => '<tr><td>'+esc(v.page_slug)+'</td><td>'+esc(v.users?.username||'Anonymous')+'</td><td>'+esc(v.ip_address||'—')+'</td><td class="cell-device">'+esc((v.device_name||'—').substring(0,60))+'</td><td>'+fmt(v.viewed_at)+'</td></tr>').join('') || '<tr><td colspan="5">No views yet</td></tr>';
+  };
+
+  AdminPanel.load_activity = async () => {
+    const { data } = await api('GET', '/admin/activity');
+    if (!data) return;
+    document.querySelector('#activity-table tbody').innerHTML =
+      data.map(a => '<tr><td>'+esc(a.users?.username||a.user_id||'—')+'</td><td><span class="badge">'+esc(a.action)+'</span></td><td>'+esc(a.details||'—')+'</td><td>'+esc(a.ip_address||'—')+'</td><td>'+fmt(a.created_at)+'</td></tr>').join('') || '<tr><td colspan="5">No activity</td></tr>';
+  };
+
+  AdminPanel.load_failed = async () => {
+    const { data } = await api('GET', '/admin/failed-logins');
+    if (!data) return;
+    document.querySelector('#failed-table tbody').innerHTML =
+      data.map(f => '<tr><td>'+esc(f.username)+'</td><td>'+esc(f.ip_address||'—')+'</td><td class="cell-device">'+esc((f.device_name||'—').substring(0,60))+'</td><td>'+fmt(f.attempted_at)+'</td></tr>').join('') || '<tr><td colspan="4">No failed attempts</td></tr>';
+  };
+
+  AdminPanel.blockUser = async (id) => { await api('POST', '/admin/users/'+id+'/block', {}); AdminPanel.load_users(); };
+  AdminPanel.unblockUser = async (id) => { await api('POST', '/admin/users/'+id+'/unblock', {}); AdminPanel.load_users(); };
+  AdminPanel.changeRole = async (id, roleId) => { await api('PUT', '/admin/users/'+id+'/role', { roleId: parseInt(roleId) }); };
+  AdminPanel.grantPerm = async () => {
+    const userId = document.getElementById('perm-user').value;
+    const pageSlug = document.getElementById('perm-page').value;
+    await api('POST', '/admin/permissions/grant', { pageSlug, userId });
+    AdminPanel.load_permissions();
+  };
+  AdminPanel.revokePerm = async () => {
+    const userId = document.getElementById('perm-user').value;
+    const pageSlug = document.getElementById('perm-page').value;
+    await api('POST', '/admin/permissions/revoke', { pageSlug, userId });
+    AdminPanel.load_permissions();
+  };
+  AdminPanel.showCreateUser = () => { document.getElementById('create-user-form').style.display = 'flex'; };
+  AdminPanel.hideCreateUser = () => { document.getElementById('create-user-form').style.display = 'none'; };
+  AdminPanel.createUser = async () => {
+    const username = document.getElementById('cu-username').value;
+    const email = document.getElementById('cu-email').value;
+    const password = document.getElementById('cu-password').value;
+    const roleId = parseInt(document.getElementById('cu-role').value);
+    const { success, error } = await api('POST', '/admin/users', { username, email, password, roleId });
+    if (!success) { alert(error || 'Failed'); return; }
+    AdminPanel.hideCreateUser();
+    AdminPanel.load_users();
+  };
+
+  function statCard(label, val) {
+    return '<div class="stat-card"><div class="stat-value">'+val+'</div><div class="stat-label">'+label+'</div></div>';
+  }
+
+  /* Initial load */
+  AdminPanel.load_dashboard();
+})();
+</script>
