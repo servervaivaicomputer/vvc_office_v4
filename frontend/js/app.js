@@ -43,69 +43,61 @@ const App = (function () {
   }
 
   /* ══════════════════════════════════════════════════
-     injectContent — FIXED
-     Styles → head, HTML → container, Scripts → execute
+     injectContent — FINAL FIX
+
+     Browser behavior:
+     - innerHTML = html    → DOM create হয়, script execute হয় না
+     - replaceChild(script) → fresh script DOM এ insert হয়, execute হয়
      ══════════════════════════════════════════════════ */
   function injectContent(container, html) {
-    container.innerHTML = '';
+    /* Step 1: HTML set করো (scripts won't run) */
+    container.innerHTML = html;
 
-    var tmp = document.createElement('div');
-    tmp.innerHTML = html;
+    /* Step 2: Styles → document.head এ move করো */
+    var styles = container.querySelectorAll('style');
+    for (var i = 0; i < styles.length; i++) {
+      var ns = document.createElement('style');
+      ns.textContent = styles[i].textContent;
+      ns.setAttribute('data-pg', '1');
+      document.head.appendChild(ns);
+      styles[i].remove();
+    }
 
-    /* ── 1. Styles collect করো ── */
-    var styles = [];
-    tmp.querySelectorAll('style').forEach(function (el) {
-      styles.push(el.textContent);
-    });
+    /* Step 3: প্রতিটি script কে fresh createElement দিয়ে replace করো
+       Browser fresh createElement script execute করে */
+    var scripts = container.querySelectorAll('script');
+    var scriptsCopy = [];
+    for (var j = 0; j < scripts.length; j++) {
+      scriptsCopy.push(scripts[j]);
+    }
 
-    /* ── 2. Scripts collect করো ── */
-    var inlineScripts = [];
-    var externalScripts = [];
-    tmp.querySelectorAll('script').forEach(function (el) {
-      if (el.getAttribute('src')) {
-        externalScripts.push(el.getAttribute('src'));
+    for (var k = 0; k < scriptsCopy.length; k++) {
+      var old = scriptsCopy[k];
+      var ns = document.createElement('script');
+
+      /* Copy all attributes (src, type, etc) */
+      for (var a = 0; a < old.attributes.length; a++) {
+        ns.setAttribute(old.attributes[a].name, old.attributes[a].value);
+      }
+
+      /* Copy inline content */
+      if (old.src || old.getAttribute('src')) {
+        ns.src = old.getAttribute('src');
       } else {
-        inlineScripts.push(el.textContent);
+        ns.textContent = old.textContent;
       }
-    });
 
-    /* ── 3. Style + Script tags remove করো ── */
-    tmp.querySelectorAll('style, script').forEach(function (el) {
-      el.remove();
-    });
-
-    /* ── 4. Styles → document.head ── */
-    styles.forEach(function (css) {
-      var s = document.createElement('style');
-      s.textContent = css;
-      s.setAttribute('data-pg', '1');
-      document.head.appendChild(s);
-    });
-
-    /* ── 5. HTML → container (styles/scripts ছাড়া) ── */
-    container.innerHTML = tmp.innerHTML;
-
-    /* ── 6. External scripts → load ── */
-    externalScripts.forEach(function (src) {
-      var s = document.createElement('script');
-      s.src = src;
-      s.setAttribute('data-pg', '1');
-      document.head.appendChild(s);
-    });
-
-    /* ── 7. Inline scripts → execute (new Function) ── */
-    inlineScripts.forEach(function (code) {
-      try {
-        (new Function(code))();
-      } catch (e) {
-        console.error('[App] Script error:', e);
-      }
-    });
+      /* Replace — this triggers execution */
+      old.parentNode.replaceChild(ns, old);
+    }
   }
 
-  /* ── Injected style clear ──────────────────────── */
+  /* ── Clear old styles ──────────────────────────── */
   function clearInjectedStyles() {
-    document.querySelectorAll('style[data-pg]').forEach(function (s) { s.remove(); });
+    var old = document.querySelectorAll('style[data-pg]');
+    for (var i = 0; i < old.length; i++) {
+      old[i].remove();
+    }
   }
 
   /* ── Loader ────────────────────────────────────── */
