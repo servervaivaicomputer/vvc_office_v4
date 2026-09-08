@@ -1,12 +1,36 @@
 const App = (function () {
   const API_BASE = '/api';
   let currentUser = null;
+  let csrfToken = null;
+  let authChecked = false;
 
+  /* ── Loader Style (একবার inject হয়) ─────────────── */
+  let styleInjected = false;
+  function injectBaseStyle() {
+    if (styleInjected) return;
+    styleInjected = true;
+    const s = document.createElement('style');
+    s.textContent = [
+      '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; }',
+      '#app-content { width: 100%; min-height: 100vh; }',
+      '.pg-loader { min-height: 100vh; display: flex; align-items: center; justify-content: center; gap: 6px; }',
+      '.pg-loader span { width: 8px; height: 8px; background: #999; border-radius: 50%; animation: _pgB 1.2s infinite ease-in-out; }',
+      '.pg-loader span:nth-child(2) { animation-delay: 0.2s; }',
+      '.pg-loader span:nth-child(3) { animation-delay: 0.4s; }',
+      '@keyframes _pgB { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }'
+    ].join('\n');
+    document.head.appendChild(s);
+  }
+
+  /* ── CSRF ─────────────────────────────────────────── */
   function getCsrf() {
+    if (csrfToken) return csrfToken;
     const m = document.cookie.match(/csrf_token=([^;]+)/);
     return m ? m[1] : '';
   }
 
+  /* ── Fetch wrapper ───────────────────────────────── */
   async function api(method, path, body) {
     const opts = {
       method,
@@ -18,139 +42,156 @@ const App = (function () {
     return res.json();
   }
 
+  /* ── Content inject (style + script সহ) ──────────── */
   function injectContent(container, html) {
-    container.innerHTML = html;
-    const scripts = container.querySelectorAll('script');
-    scripts.forEach(old => {
+    container.innerHTML = '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+
+    /* backend style tags → document.head এ যোগ */
+    tmp.querySelectorAll('style').forEach(function (old) {
+      const s = document.createElement('style');
+      s.textContent = old.textContent;
+      s.setAttribute('data-pg', '1');
+      document.head.appendChild(s);
+      old.remove();
+    });
+
+    /* backend script tags → execute */
+    tmp.querySelectorAll('script').forEach(function (old) {
       const s = document.createElement('script');
-      if (old.src) { s.src = old.src; }
-      else { s.textContent = old.textContent; }
+      if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
       old.parentNode.replaceChild(s, old);
     });
+
+    container.innerHTML = tmp.innerHTML;
   }
 
-  function renderNav(user) {
-    const nav = document.getElementById('navbar');
-    if (!nav) return;
-    const slug = getSlug();
-    const links = [
-      { href: '/home', label: 'Home' },
-      { href: '/about', label: 'About' },
-      { href: '/workspace', label: 'Workspace' }
-    ];
-    if (user?.isAdmin) links.push({ href: '/admin', label: 'Admin' });
+  /* ── পুরোনো injected style remove ──────────────── */
+  function clearInjectedStyles() {
+    document.querySelectorAll('style[data-pg]').forEach(function (s) { s.remove(); });
+  }
 
-    nav.innerHTML =
-      '<div class="navbar">' +
-        '<span class="nav-brand">SecureApp</span>' +
-        '<div class="nav-links">' +
-          (user ? '<span class="nav-user">' + esc(user.username) + '</span>' : '') +
-          links.map(l => {
-            const lSlug = l.href.replace(/^\/+|\/+$/g, '');
-            return '<a href="' + l.href + '"' + (slug === lSlug ? ' class="active"' : '') + '>' + l.label + '</a>';
-          }).join('') +
-          (user ? '<button onclick="App.logout()">Logout</button>' : '<a href="/login">Login</a>') +
-        '</div>' +
+  /* ── Centered loader (JavaScript দিয়ে) ─────────── */
+  function showLoader(c) {
+    c.innerHTML = '<div class="pg-loader"><span></span><span></span><span></span></div>';
+  }
+
+  /* ── Access denied message ──────────────────────── */
+  function showDenied(c, msg) {
+    c.innerHTML =
+      '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem">' +
+        '<h2 style="font-size:1.4rem">Access Denied</h2>' +
+        '<p style="color:#888;font-size:0.9rem">' + esc(msg || 'No permission') + '</p>' +
+        '<a href="/home" style="padding:0.6rem 1.4rem;background:#333;color:#fff;border-radius:6px;text-decoration:none;font-size:0.9rem">Go Home</a>' +
       '</div>';
   }
 
-  function renderFooter() {
-    const f = document.getElementById('footer');
-    if (f) f.innerHTML = '<footer>&copy; ' + new Date().getFullYear() + ' SecureApp. All rights reserved.</footer>';
-  }
-
-  function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-
-  function showLoader(container) {
-    container.innerHTML =
-      '<div class="loader-wrap"><div class="loader"></div><p>Loading secure content...</p></div>';
-  }
-
-  /* URL থেকে slug বের করা: /about → about, / → home, /reports/quarterly → reports/quarterly */
+  /* ── Slug from URL ──────────────────────────────── */
   function getSlug() {
-    let path = window.location.pathname.replace(/^\/+|\/+$/g, '');
-    if (!path || path === 'home') return 'home';
-    return path;
+    var p = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    if (!p || p === 'home') return 'home';
+    return p;
+  }
+
+  /* ── Auth (একবার check, cache) ─────────────────── */
+  async function ensureAuth() {
+    if (!csrfToken) {
+      var r = await api('GET', '/auth/csrf');
+      if (r.csrfToken) csrfToken = r.csrfToken;
+    }
+    if (!authChecked) {
+      var me = await api('GET', '/auth/me');
+      if (!me.success) return false;
+      currentUser = me.data.user;
+      authChecked = true;
+    }
+    return true;
+  }
+
+  /* ── Page content cache (sessionStorage) ────────── */
+  function getCached(slug) {
+    try {
+      var c = sessionStorage.getItem('pg_' + slug);
+      if (c) { var d = JSON.parse(c); if (Date.now() - d.t < 300000) return d.h; }
+    } catch (e) {}
+    return null;
+  }
+  function setCached(slug, html) {
+    try { sessionStorage.setItem('pg_' + slug, JSON.stringify({ h: html, t: Date.now() })); } catch (e) {}
+  }
+  function clearCache() {
+    try { sessionStorage.clear(); } catch (e) {}
+  }
+
+  /* ── Reset session ──────────────────────────────── */
+  function resetSession() {
+    currentUser = null;
+    authChecked = false;
+    csrfToken = null;
+    clearCache();
   }
 
   /* ══════════════════════════════════════════════════
-     init() — প্রতিটি পেজ এই ফাংশন কল করে (login ব্যতীত)
-     URL পড়ে slug নির্ধারণ করে, অথেন্টিকেশন চেক করে,
-     তারপর ব্যাকএন্ড থেকে পেজ কন্টেন্ট আনে
+     init() — প্রতিটি page-এ এটা call হয়
      ══════════════════════════════════════════════════ */
   async function init() {
-    const container = document.getElementById('app-content');
-    if (!container) return;
+    var c = document.getElementById('app-content');
+    if (!c) return;
 
-    const slug = getSlug();
+    injectBaseStyle();
 
-    /* login পেজ হলে আলাদাভাবে হ্যান্ডেল */
-    if (slug === 'login') {
-      await initLogin();
-      return;
-    }
+    var slug = getSlug();
 
-    /* ১। CSRF টোকেন বুটস্ট্র্যাপ */
-    await api('GET', '/auth/csrf');
+    /* login page হলে আলাদা */
+    if (slug === 'login') { await initLogin(); return; }
 
-    /* ২। অথেন্টিকেশন চেক */
-    const me = await api('GET', '/auth/me');
-    if (!me.success) {
-      window.location.href = '/login';
-      return;
-    }
-    currentUser = me.data.user;
+    /* auth check */
+    showLoader(c);
+    var ok = await ensureAuth();
+    if (!ok) { window.location.href = '/login'; return; }
 
-    /* ৩। Navbar ও Footer রেন্ডার */
-    renderNav(currentUser);
-    renderFooter();
+    /* cache check */
+    clearInjectedStyles();
+    var cached = getCached(slug);
+    if (cached) { injectContent(c, cached); return; }
 
-    /* ৪। ব্যাকএন্ড থেকে এই URL-এর পেজ কন্টেন্ট আনো */
-    showLoader(container);
-    const res = await api('GET', '/pages/' + slug);
+    /* backend থেকে fetch */
+    showLoader(c);
+    var res = await api('GET', '/pages/' + slug);
 
-    if (!res.success) {
-      container.innerHTML =
-        '<div class="card" style="text-align:center;margin-top:3rem">' +
-          '<h2>Access Denied</h2>' +
-          '<p style="margin:1rem 0;color:var(--text-muted)">' +
-            esc(res.error || 'You do not have permission to view this page.') +
-          '</p>' +
-          '<a href="/home" class="btn btn-accent">Go Home</a>' +
-        '</div>';
-      return;
-    }
+    if (!res.success) { showDenied(c, res.error); return; }
 
-    /* ৫। কন্টেন্ট ইনজেক্ট করো (script সহ) */
-    injectContent(container, res.data.content);
+    setCached(slug, res.data.content);
+    injectContent(c, res.data.content);
   }
 
   /* ══════════════════════════════════════════════════
-     Login পেজের জন্য আলাদা init
+     initLogin()
      ══════════════════════════════════════════════════ */
   async function initLogin() {
-    await api('GET', '/auth/csrf');
-
-    /* যদি আগে থেকে লগইন করা থাকে → home-এ পাঠাও */
-    const me = await api('GET', '/auth/me');
-    if (me.success) { window.location.href = '/home'; return; }
-
-    renderNav(null);
-    renderFooter();
+    injectBaseStyle();
+    if (!csrfToken) {
+      var r = await api('GET', '/auth/csrf');
+      if (r.csrfToken) csrfToken = r.csrfToken;
+    }
+    /* already logged in → home */
+    var me = await api('GET', '/auth/me');
+    if (me.success) { window.location.href = '/home'; }
   }
 
   /* ══════════════════════════════════════════════════
-     Login সাবমিট
+     login()
      ══════════════════════════════════════════════════ */
   async function login(isAdmin) {
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
-    const errEl = document.getElementById('login-error');
-    const btn = document.getElementById('login-btn');
+    var username = document.getElementById('login-username').value.trim();
+    var password = document.getElementById('login-password').value;
+    var errEl = document.getElementById('login-error');
+    var btn = document.getElementById('login-btn');
 
     errEl.style.display = 'none';
     if (!username || !password) {
-      errEl.textContent = 'Please enter username and password.';
+      errEl.textContent = 'Enter username and password.';
       errEl.style.display = 'block';
       return;
     }
@@ -158,14 +199,13 @@ const App = (function () {
     btn.disabled = true;
     btn.textContent = 'Signing in...';
 
-    const endpoint = isAdmin ? '/auth/admin-login' : '/auth/login';
-    const res = await api('POST', endpoint, { username, password });
+    var res = await api('POST', isAdmin ? '/auth/admin-login' : '/auth/login', { username: username, password: password });
 
     if (res.success) {
+      resetSession();
       window.location.href = isAdmin ? '/admin' : '/home';
     } else {
-      errEl.textContent = res.error +
-        (res.attemptsRemaining != null ? ' (' + res.attemptsRemaining + ' attempts remaining)' : '');
+      errEl.textContent = res.error + (res.attemptsRemaining != null ? ' (' + res.attemptsRemaining + ' left)' : '');
       errEl.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Sign In';
@@ -173,13 +213,16 @@ const App = (function () {
   }
 
   /* ══════════════════════════════════════════════════
-     Logout
+     logout()
      ══════════════════════════════════════════════════ */
   async function logout() {
     await api('POST', '/auth/logout');
-    currentUser = null;
+    resetSession();
     window.location.href = '/login';
   }
 
-  return { init, initLogin, login, logout, api, getCsrf, esc, getSlug };
+  /* ── Escape ─────────────────────────────────────── */
+  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  return { init: init, initLogin: initLogin, login: login, logout: logout, api: api, getCsrf: getCsrf, esc: esc, getSlug: getSlug };
 })();
