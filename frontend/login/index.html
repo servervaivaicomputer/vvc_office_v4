@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — SecureApp</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav id="navbar"></nav>
+  <main>
+    <div class="login-container">
+      <h1>Sign In</h1>
+      <p class="subtitle">Enter your credentials to continue</p>
+      <div class="card">
+        <div id="login-error" class="error-msg"></div>
+        <div class="form-group">
+          <label for="login-username">Username</label>
+          <input type="text" id="login-username" autocomplete="username" autofocus>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" autocomplete="current-password">
+        </div>
+        <button id="login-btn" class="btn btn-accent btn-full" onclick="App.login(false)">Sign In</button>
+        <p style="text-align:center;margin-top:1rem;font-size:0.8rem;color:var(--text-muted)">
+          <a href="#" onclick="App.login(true);return false;">Admin Login</a>
+        </p>
+      </div>
+    </div>
+  </main>
+  <div id="footer"></div>
+  <script src="/js/app.js"></script>
+  <script>
+    document.getElementById('login-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') App.login(false);
+    });
+    App.initLogin();
+  </script>
+</body>
+</html>
