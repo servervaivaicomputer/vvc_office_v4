@@ -317,4 +317,39 @@ function safeUser(u) {
   };
 }
 
+/* ═══ TEMPORARY SEED — প্রথম admin তৈরি করার জন্য, পরে মুছে ফেলো ═══ */
+router.post('/seed/admin', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, error: 'username, email, password required' });
+    }
+
+    const existing = await db.findUserByUsername(username);
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'User already exists' });
+    }
+
+    const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+    const hash = await bcrypt.hash(password, rounds);
+
+    const user = await db.createUser({
+      username,
+      email,
+      passwordHash: hash,
+      roleId: 1
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin created successfully. DELETE this seed route now!',
+      data: { id: user.id, username: user.username, role: 'admin' }
+    });
+  } catch (err) {
+    console.error('Seed error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
