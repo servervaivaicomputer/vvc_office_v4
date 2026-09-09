@@ -44,9 +44,9 @@ const App = (function () {
     }
 
     /*
-     * innerHTML does not execute script tags. Parse the backend HTML,
-     * collect its scripts, remove them, insert the HTML, then recreate
-     * the scripts so the browser executes them in their original order.
+     * innerHTML inserts markup but does not execute script tags.
+     * Collect backend scripts, insert the remaining HTML, then recreate
+     * each script so inline and external backend JavaScript can run.
      */
     var template = document.createElement('template');
     template.innerHTML = String(html || '');
@@ -73,9 +73,9 @@ const App = (function () {
 
       if (src) {
         /*
-         * Backend HTML can keep src unchanged, for example:
-         * <script src="/js/script.js"></script>
-         * The path is resolved against the current frontend origin.
+         * Keep backend HTML unchanged, including src="/js/script.js".
+         * The URL is resolved against the frontend origin where the
+         * deployed /js/script.js file is available.
          */
         newScript.src = new URL(
           src,
@@ -90,8 +90,13 @@ const App = (function () {
           console.error('Backend external script failed:', newScript.src);
         };
       } else {
-        // Execute inline script returned by the backend.
+        // Execute inline JavaScript returned by the backend.
         newScript.textContent = oldScript.textContent || '';
+
+        // Recreate the script in the page context. This makes backend
+        // declarations such as function test() visible to onclick="test()".
+        newScript.textContent += '\n//# sourceURL=backend-inline-script.js';
+        newScript.setAttribute('data-backend-inline', 'true');
       }
 
       app.appendChild(newScript);
@@ -443,7 +448,8 @@ const App = (function () {
 
     esc: esc,
 
-    getSlug: getSlug
+    getSlug: getSlug,
+    writeDocument: writeDocument
 
   };
 
