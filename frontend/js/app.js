@@ -38,97 +38,63 @@ const App = (function () {
   function writeDocument(html) {
     var app = document.getElementById('app-content');
 
-    if (!app) return;
+    if (!app) {
+      console.error('#app-content not found');
+      return;
+    }
 
     /*
-     * Parse backend HTML
+     * innerHTML does not execute script tags. Parse the backend HTML,
+     * collect its scripts, remove them, insert the HTML, then recreate
+     * the scripts so the browser executes them in their original order.
      */
     var template = document.createElement('template');
-
     template.innerHTML = String(html || '');
 
-    /*
-     * Collect scripts before inserting HTML
-     */
     var scripts = Array.from(
       template.content.querySelectorAll('script')
     );
 
-    /*
-     * Remove scripts temporarily
-     * so they can be executed manually
-     */
     scripts.forEach(function (script) {
       script.remove();
     });
 
-    /*
-     * Clear previous page
-     */
     app.replaceChildren();
+    app.appendChild(template.content.cloneNode(true));
 
-    /*
-     * Insert backend HTML
-     */
-    app.appendChild(
-      template.content.cloneNode(true)
-    );
-
-    /*
-     * Execute backend scripts
-     */
     scripts.forEach(function (oldScript) {
+      var newScript = document.createElement('script');
 
-      var newScript =
-        document.createElement('script');
+      Array.from(oldScript.attributes).forEach(function (attr) {
+        newScript.setAttribute(attr.name, attr.value);
+      });
 
-      /*
-       * Copy all attributes
-       *
-       * Example:
-       * type
-       * src
-       * defer
-       * async
-       */
-      Array.from(oldScript.attributes).forEach(
-        function (attr) {
+      var src = oldScript.getAttribute('src');
 
-          newScript.setAttribute(
-            attr.name,
-            attr.value
-          );
+      if (src) {
+        /*
+         * Backend HTML can keep src unchanged, for example:
+         * <script src="/js/script.js"></script>
+         * The path is resolved against the current frontend origin.
+         */
+        newScript.src = new URL(
+          src,
+          window.location.origin
+        ).href;
 
-        }
-      );
+        newScript.onload = function () {
+          console.log('Backend external script loaded:', newScript.src);
+        };
 
-      /*
-       * External JS
-       */
-      if (oldScript.src) {
-
-        newScript.src =
-          oldScript.src;
-
+        newScript.onerror = function () {
+          console.error('Backend external script failed:', newScript.src);
+        };
+      } else {
+        // Execute inline script returned by the backend.
+        newScript.textContent = oldScript.textContent || '';
       }
 
-      /*
-       * Inline JS
-       */
-      else {
-
-        newScript.textContent =
-          oldScript.textContent || '';
-
-      }
-
-      /*
-       * Append inside app-content
-       *
-       * Script will execute automatically.
-       */
       app.appendChild(newScript);
-
     });
   }
 
@@ -482,5 +448,3 @@ const App = (function () {
   };
 
 })();
-
-App.init();
