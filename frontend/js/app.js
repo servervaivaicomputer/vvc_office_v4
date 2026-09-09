@@ -1,20 +1,59 @@
 const App = (function () {
   const API_BASE = '/api';
+
   let currentUser = null;
   let csrfToken = null;
   let authChecked = false;
 
-  /* ── CSRF ──────────────────────────────────────── */
-  function getCsrf() {
-    if (csrfToken) return csrfToken;
-
-    var m = document.cookie.match(/csrf_token=([^;]+)/);
-
-    return m ? decodeURIComponent(m[1]) : '';
+  /* ── Debug Logger ─────────────────────────────── */
+  function log(step, data) {
+    console.log(
+      '%c[APP] ' + step,
+      'color:#2196f3;font-weight:bold;',
+      data !== undefined ? data : ''
+    );
   }
 
-  /* ── Fetch ─────────────────────────────────────── */
+  function logError(step, error) {
+    console.error(
+      '[APP ERROR] ' + step,
+      error
+    );
+  }
+
+  log('app.js loaded');
+
+  /* ── CSRF ─────────────────────────────────────── */
+  function getCsrf() {
+    log('Getting CSRF token');
+
+    if (csrfToken) {
+      log('Using cached CSRF token');
+      return csrfToken;
+    }
+
+    var m = document.cookie.match(
+      /(?:^|;\s*)csrf_token=([^;]+)/
+    );
+
+    var token = m
+      ? decodeURIComponent(m[1])
+      : '';
+
+    log('CSRF cookie found:', !!token);
+
+    return token;
+  }
+
+  /* ── API ──────────────────────────────────────── */
   async function api(method, path, body) {
+
+    log('API REQUEST', {
+      method: method,
+      path: path,
+      body: body || null
+    });
+
     var opts = {
       method: method,
       credentials: 'include',
@@ -28,311 +67,821 @@ const App = (function () {
       opts.body = JSON.stringify(body);
     }
 
-    var res = await fetch(API_BASE + path, opts);
+    try {
 
-    if (!res.ok) {
-      throw new Error('HTTP ' + res.status);
+      var res = await fetch(
+        API_BASE + path,
+        opts
+      );
+
+      log('API STATUS', {
+        status: res.status,
+        ok: res.ok,
+        url: res.url
+      });
+
+      var text = await res.text();
+
+      log('API RAW RESPONSE', text);
+
+      var data;
+
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        logError(
+          'API JSON parse failed',
+          e
+        );
+
+        throw new Error(
+          'Server returned invalid JSON'
+        );
+      }
+
+      log('API JSON RESPONSE', data);
+
+      return data;
+
+    } catch (err) {
+
+      logError(
+        'API request failed',
+        err
+      );
+
+      throw err;
     }
-
-    return await res.json();
   }
 
-  /* ── Backend HTML Injection ────────────────────── */
+  /* ── Backend HTML Injection ───────────────────── */
   function writeDocument(html) {
-    var app = document.getElementById('app-content');
+
+    log('========== PAGE INJECTION START ==========');
+
+    var app =
+      document.getElementById(
+        'app-content'
+      );
 
     if (!app) {
-      console.error('app-content not found');
+      logError(
+        '#app-content not found'
+      );
       return;
     }
 
+    log(
+      '#app-content found',
+      app
+    );
+
+    /*
+     * Show exactly what backend sent
+     */
+    log(
+      'BACKEND CONTENT LENGTH',
+      String(html || '').length
+    );
+
+    console.group(
+      '%cBACKEND CONTENT',
+      'color:#9c27b0;font-weight:bold;'
+    );
+
+    console.log(
+      String(html || '')
+    );
+
+    console.groupEnd();
+
+
     try {
-      /*
-       * Parse backend HTML without executing scripts
-       */
-      var template = document.createElement('template');
-      template.innerHTML = String(html || '');
 
       /*
-       * Collect scripts BEFORE inserting content
+       * Parse HTML
        */
-      var scripts = Array.from(
-        template.content.querySelectorAll('script')
+      var template =
+        document.createElement(
+          'template'
+        );
+
+      template.innerHTML =
+        String(html || '');
+
+      log(
+        'HTML parsed successfully'
       );
 
-      /*
-       * Remove scripts from HTML.
-       * They will be executed manually below.
-       */
-      scripts.forEach(function (script) {
-        script.remove();
-      });
 
       /*
-       * Insert normal HTML
+       * Find scripts
+       */
+      var scripts =
+        Array.from(
+          template.content
+            .querySelectorAll('script')
+        );
+
+      log(
+        'Scripts found',
+        scripts.length
+      );
+
+
+      scripts.forEach(
+        function (script, index) {
+
+          log(
+            'SCRIPT #' + (index + 1),
+            {
+              src: script.src || null,
+              type: script.type || 'classic',
+              content:
+                script.textContent
+            }
+          );
+
+        }
+      );
+
+
+      /*
+       * Remove scripts from fragment
+       */
+      scripts.forEach(
+        function (script) {
+          script.remove();
+        }
+      );
+
+      log(
+        'Scripts temporarily removed'
+      );
+
+
+      /*
+       * Insert HTML
        */
       app.replaceChildren(
         template.content.cloneNode(true)
       );
 
+      log(
+        'Backend HTML inserted into #app-content'
+      );
+
+
       /*
-       * Execute backend scripts as REAL classic scripts.
-       *
-       * This is important:
-       * function test() {}
-       * becomes window.test()
-       *
-       * Therefore:
-       * onclick="test()"
-       * works.
+       * Check inserted HTML
        */
-      executeScripts(scripts);
+      log(
+        'Current #app-content HTML',
+        app.innerHTML
+      );
+
+
+      /*
+       * Execute scripts
+       */
+      scripts.forEach(
+        function (script, index) {
+
+          log(
+            'Executing script #' +
+            (index + 1)
+          );
+
+          runScript(
+            script,
+            index + 1
+          );
+
+        }
+      );
+
+
+      /*
+       * Check test function
+       */
+      setTimeout(function () {
+
+        log(
+          'Checking window.test',
+          typeof window.test
+        );
+
+        if (typeof window.test === 'function') {
+
+          console.log(
+            '%c✓ window.test EXISTS',
+            'color:green;font-weight:bold;'
+          );
+
+        } else {
+
+          console.warn(
+            '%c✗ window.test NOT FOUND',
+            'color:red;font-weight:bold;'
+          );
+
+        }
+
+        log(
+          '========== PAGE INJECTION END =========='
+        );
+
+      }, 0);
 
     } catch (err) {
-      console.error(
-        'Page injection error:',
+
+      logError(
+        'PAGE INJECTION FAILED',
         err
       );
+
     }
   }
 
-  /* ── Execute Backend Scripts ───────────────────── */
-  function executeScripts(scripts) {
-    if (!scripts || !scripts.length) return;
 
-    var index = 0;
+  /* ── Execute Script ───────────────────────────── */
+  function runScript(
+    oldScript,
+    number
+  ) {
 
-    function next() {
-      if (index >= scripts.length) return;
+    log(
+      'Preparing script #' + number
+    );
 
-      var oldScript = scripts[index++];
-      var newScript = document.createElement('script');
+    var script =
+      document.createElement(
+        'script'
+      );
 
-      /*
-       * Copy all script attributes
-       */
-      Array.from(oldScript.attributes).forEach(function (attr) {
-        newScript.setAttribute(
-          attr.name,
-          attr.value
-        );
-      });
+    /*
+     * Classic script
+     */
+    script.type =
+      'text/javascript';
 
-      /*
-       * Inline script
-       */
-      if (!oldScript.src) {
-        newScript.text = oldScript.textContent || '';
 
-        /*
-         * Append to document.
-         * Classic script executes in global scope.
-         */
-        document.body.appendChild(newScript);
+    /*
+     * Copy attributes
+     */
+    Array.from(
+      oldScript.attributes
+    ).forEach(
+      function (attr) {
 
-        /*
-         * Remove after execution.
-         * Functions/variables declared by a classic
-         * script remain available globally.
-         */
-        newScript.remove();
+        if (
+          attr.name.toLowerCase() !==
+          'type'
+        ) {
 
-        next();
-        return;
+          script.setAttribute(
+            attr.name,
+            attr.value
+          );
+
+        }
+
       }
+    );
 
-      /*
-       * External script
-       * Keep execution order.
-       */
-      newScript.onload = function () {
-        newScript.remove();
-        next();
-      };
 
-      newScript.onerror = function () {
-        console.error(
-          'Failed to load script:',
-          oldScript.src
-        );
+    /*
+     * External script
+     */
+    if (oldScript.src) {
 
-        newScript.remove();
-        next();
-      };
+      log(
+        'External script detected',
+        oldScript.src
+      );
 
-      document.body.appendChild(newScript);
+      script.onload =
+        function () {
+
+          log(
+            'External script loaded',
+            oldScript.src
+          );
+
+        };
+
+      script.onerror =
+        function (err) {
+
+          logError(
+            'External script failed',
+            oldScript.src
+          );
+
+        };
+
+      script.src =
+        oldScript.src;
+
+      document.head.appendChild(
+        script
+      );
+
+      return;
     }
 
-    next();
+
+    /*
+     * Inline script
+     */
+    var code =
+      oldScript.textContent || '';
+
+    log(
+      'Inline script length',
+      code.length
+    );
+
+    console.group(
+      '%cSCRIPT #' + number + ' CODE',
+      'color:#ff9800;font-weight:bold;'
+    );
+
+    console.log(code);
+
+    console.groupEnd();
+
+
+    /*
+     * Execute as classic global script
+     */
+    script.textContent = code;
+
+
+    try {
+
+      document.head.appendChild(
+        script
+      );
+
+      log(
+        'Script #' + number +
+        ' appended to document.head'
+      );
+
+    } catch (err) {
+
+      logError(
+        'Script #' + number +
+        ' execution failed',
+        err
+      );
+
+    }
   }
 
-  /* ── Error page ───────────────────────────────── */
+
+  /* ── Error Page ───────────────────────────────── */
   function errorPage(msg) {
+
+    log(
+      'Generating error page',
+      msg
+    );
+
     return '<!DOCTYPE html>' +
-      '<html><head><meta charset="utf-8"><title>Error</title>' +
+      '<html>' +
+      '<head>' +
+      '<meta charset="utf-8">' +
+      '<title>Error</title>' +
       '<style>' +
-        'body{min-height:100vh;display:flex;align-items:center;justify-content:center;' +
-        'flex-direction:column;gap:1rem;font-family:system-ui;background:#f5f5f5}' +
+        'body{' +
+          'min-height:100vh;' +
+          'display:flex;' +
+          'align-items:center;' +
+          'justify-content:center;' +
+          'flex-direction:column;' +
+          'gap:1rem;' +
+          'font-family:system-ui;' +
+          'background:#f5f5f5' +
+        '}' +
         'h2{font-size:1.4rem}' +
         'p{color:#888;font-size:.9rem}' +
-        'a{padding:.6rem 1.4rem;background:#333;color:#fff;' +
-        'border-radius:6px;text-decoration:none}' +
-      '</style></head>' +
-      '<body><h2>Access Denied</h2>' +
-      '<p>' + esc(msg || 'No permission') + '</p>' +
-      '<a href="/home">Go Home</a></body></html>';
+        'a{' +
+          'padding:.6rem 1.4rem;' +
+          'background:#333;' +
+          'color:#fff;' +
+          'border-radius:6px;' +
+          'text-decoration:none' +
+        '}' +
+      '</style>' +
+      '</head>' +
+      '<body>' +
+      '<h2>Access Denied</h2>' +
+      '<p>' +
+      esc(msg || 'No permission') +
+      '</p>' +
+      '<a href="/home">Go Home</a>' +
+      '</body>' +
+      '</html>';
   }
 
-  /* ── Slug ──────────────────────────────────────── */
+
+  /* ── Slug ─────────────────────────────────────── */
   function getSlug() {
-    var p = window.location.pathname
-      .replace(/^\/+|\/+$/g, '');
+
+    var path =
+      window.location.pathname;
+
+    log(
+      'Current pathname',
+      path
+    );
+
+    var p =
+      path.replace(
+        /^\/+|\/+$/g,
+        ''
+      );
 
     if (!p || p === 'home') {
+
+      log(
+        'Resolved slug',
+        'home'
+      );
+
       return 'home';
     }
+
+    log(
+      'Resolved slug',
+      p
+    );
 
     return p;
   }
 
-  /* ── Auth ──────────────────────────────────────── */
+
+  /* ── Auth ─────────────────────────────────────── */
   async function ensureAuth() {
-    if (!csrfToken) {
-      var r = await api(
-        'GET',
-        '/auth/csrf'
+
+    log(
+      '========== AUTH CHECK START =========='
+    );
+
+    try {
+
+      if (!csrfToken) {
+
+        log(
+          'Fetching CSRF token'
+        );
+
+        var r =
+          await api(
+            'GET',
+            '/auth/csrf'
+          );
+
+        log(
+          'CSRF response',
+          r
+        );
+
+        if (r.csrfToken) {
+
+          csrfToken =
+            r.csrfToken;
+
+          log(
+            'CSRF token saved'
+          );
+
+        }
+
+      }
+
+
+      if (!authChecked) {
+
+        log(
+          'Checking current user'
+        );
+
+        var me =
+          await api(
+            'GET',
+            '/auth/me'
+          );
+
+        log(
+          'Auth/me response',
+          me
+        );
+
+        if (!me.success) {
+
+          log(
+            'Authentication failed'
+          );
+
+          return false;
+        }
+
+        currentUser =
+          me.data.user;
+
+        authChecked = true;
+
+        log(
+          'Authenticated user',
+          currentUser
+        );
+
+      } else {
+
+        log(
+          'Auth already checked'
+        );
+
+      }
+
+      log(
+        '========== AUTH CHECK SUCCESS =========='
       );
 
-      if (r.csrfToken) {
-        csrfToken = r.csrfToken;
-      }
-    }
+      return true;
 
-    if (!authChecked) {
-      var me = await api(
-        'GET',
-        '/auth/me'
+    } catch (err) {
+
+      logError(
+        'Authentication error',
+        err
       );
 
-      if (!me.success) {
-        return false;
-      }
-
-      currentUser = me.data.user;
-      authChecked = true;
+      return false;
     }
-
-    return true;
   }
+
 
   /* ── Reset Session ────────────────────────────── */
   function resetSession() {
+
+    log(
+      'Resetting session'
+    );
+
     currentUser = null;
     authChecked = false;
     csrfToken = null;
   }
 
-  /* ── Init ──────────────────────────────────────── */
-  async function init() {
-    var slug = getSlug();
 
-    /* Login page */
-    if (slug === 'login') {
-      await initLogin();
-      return;
-    }
+  /* ── Init ─────────────────────────────────────── */
+  async function init() {
+
+    console.group(
+      '%c[APP] INITIALIZATION',
+      'color:#4caf50;font-size:14px;font-weight:bold;'
+    );
 
     try {
-      /* Auth check */
-      var ok = await ensureAuth();
 
-      if (!ok) {
-        window.location.href = '/login';
-        return;
-      }
+      var slug =
+        getSlug();
 
-      /* Backend page */
-      var res = await api(
-        'GET',
-        '/pages/' + encodeURIComponent(slug)
+      log(
+        'Init slug',
+        slug
       );
 
-      if (!res.success) {
-        writeDocument(
-          errorPage(res.error)
+
+      /*
+       * Login
+       */
+      if (slug === 'login') {
+
+        log(
+          'Login page detected'
         );
+
+        await initLogin();
+
+        console.groupEnd();
+
         return;
       }
 
+
       /*
-       * Inject backend content
-       * No document.open()
-       * No document.write()
-       * No new window
+       * Auth
+       */
+      var ok =
+        await ensureAuth();
+
+      log(
+        'Authentication result',
+        ok
+      );
+
+      if (!ok) {
+
+        log(
+          'Redirecting to /login'
+        );
+
+        window.location.href =
+          '/login';
+
+        console.groupEnd();
+
+        return;
+      }
+
+
+      /*
+       * Fetch backend page
+       */
+      var endpoint =
+        '/pages/' +
+        encodeURIComponent(slug);
+
+      log(
+        'Fetching page',
+        endpoint
+      );
+
+      var res =
+        await api(
+          'GET',
+          endpoint
+        );
+
+      log(
+        'Page API response',
+        res
+      );
+
+
+      /*
+       * Error
+       */
+      if (!res.success) {
+
+        log(
+          'Backend returned error',
+          res.error
+        );
+
+        writeDocument(
+          errorPage(
+            res.error
+          )
+        );
+
+        console.groupEnd();
+
+        return;
+      }
+
+
+      /*
+       * Validate content
+       */
+      if (
+        !res.data ||
+        typeof res.data.content !==
+        'string'
+      ) {
+
+        logError(
+          'Invalid backend content',
+          res.data
+        );
+
+        console.groupEnd();
+
+        return;
+      }
+
+
+      log(
+        'Backend content received successfully'
+      );
+
+
+      /*
+       * Inject
        */
       writeDocument(
         res.data.content
       );
 
     } catch (err) {
-      console.error(
-        'App init error:',
+
+      logError(
+        'INIT FAILED',
         err
       );
 
-      var app = document.getElementById(
-        'app-content'
-      );
+      var app =
+        document.getElementById(
+          'app-content'
+        );
 
       if (app) {
+
         app.innerHTML =
           '<h2>Something went wrong.</h2>';
+
       }
+
     }
+
+    console.groupEnd();
   }
+
 
   /* ── Login Init ───────────────────────────────── */
   async function initLogin() {
+
+    log(
+      'Login initialization'
+    );
+
     try {
+
       if (!csrfToken) {
-        var r = await api(
-          'GET',
-          '/auth/csrf'
-        );
+
+        var r =
+          await api(
+            'GET',
+            '/auth/csrf'
+          );
 
         if (r.csrfToken) {
-          csrfToken = r.csrfToken;
+          csrfToken =
+            r.csrfToken;
         }
+
       }
 
-      var me = await api(
-        'GET',
-        '/auth/me'
+      var me =
+        await api(
+          'GET',
+          '/auth/me'
+        );
+
+      log(
+        'Login auth response',
+        me
       );
 
       if (me.success) {
-        window.location.href = '/home';
+
+        log(
+          'Already logged in → /home'
+        );
+
+        window.location.href =
+          '/home';
       }
 
     } catch (err) {
-      console.error(
-        'Login init error:',
+
+      logError(
+        'Login initialization failed',
         err
       );
+
     }
   }
 
+
   /* ── Login ────────────────────────────────────── */
   async function login(isAdmin) {
+
+    log(
+      'Login attempt',
+      {
+        isAdmin: isAdmin
+      }
+    );
+
     var username =
       document
-        .getElementById('login-username')
+        .getElementById(
+          'login-username'
+        )
         .value
         .trim();
 
     var password =
       document
-        .getElementById('login-password')
+        .getElementById(
+          'login-password'
+        )
         .value;
 
     var errEl =
@@ -345,9 +894,16 @@ const App = (function () {
         'login-btn'
       );
 
-    errEl.style.display = 'none';
+    errEl.style.display =
+      'none';
+
 
     if (!username || !password) {
+
+      log(
+        'Login validation failed'
+      );
+
       errEl.textContent =
         'Enter username and password.';
 
@@ -357,22 +913,39 @@ const App = (function () {
       return;
     }
 
+
     btn.disabled = true;
-    btn.textContent = 'Signing in...';
+    btn.textContent =
+      'Signing in...';
+
 
     try {
-      var res = await api(
-        'POST',
-        isAdmin
-          ? '/auth/admin-login'
-          : '/auth/login',
-        {
-          username: username,
-          password: password
-        }
+
+      var res =
+        await api(
+          'POST',
+          isAdmin
+            ? '/auth/admin-login'
+            : '/auth/login',
+          {
+            username: username,
+            password: password
+          }
+        );
+
+
+      log(
+        'Login response',
+        res
       );
 
+
       if (res.success) {
+
+        log(
+          'Login successful'
+        );
+
         resetSession();
 
         window.location.href =
@@ -382,6 +955,7 @@ const App = (function () {
 
         return;
       }
+
 
       errEl.textContent =
         res.error +
@@ -401,8 +975,9 @@ const App = (function () {
         'Sign In';
 
     } catch (err) {
-      console.error(
-        'Login error:',
+
+      logError(
+        'Login failed',
         err
       );
 
@@ -418,36 +993,61 @@ const App = (function () {
     }
   }
 
+
   /* ── Logout ───────────────────────────────────── */
   async function logout() {
+
+    log(
+      'Logout started'
+    );
+
     try {
-      await api(
-        'POST',
-        '/auth/logout'
+
+      var res =
+        await api(
+          'POST',
+          '/auth/logout'
+        );
+
+      log(
+        'Logout response',
+        res
       );
+
     } catch (err) {
-      console.error(
-        'Logout error:',
+
+      logError(
+        'Logout error',
         err
       );
+
     }
 
     resetSession();
+
+    log(
+      'Redirecting to /login'
+    );
 
     window.location.href =
       '/login';
   }
 
+
   /* ── Helpers ──────────────────────────────────── */
   function esc(s) {
+
     var d =
-      document.createElement('div');
+      document.createElement(
+        'div'
+      );
 
     d.textContent =
       s || '';
 
     return d.innerHTML;
   }
+
 
   /* ── Public API ───────────────────────────────── */
   return {
@@ -462,3 +1062,12 @@ const App = (function () {
   };
 
 })();
+
+
+/* ── Start ───────────────────────────────────────── */
+console.log(
+  '%c[APP] Starting App.init()',
+  'color:#4caf50;font-weight:bold;'
+);
+
+App.init();
