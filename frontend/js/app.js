@@ -34,7 +34,7 @@ const App = (function () {
     return res.json();
   }
 
-  /* ── Inject Backend HTML ───────────────────────── */
+  /* ── Inject Backend HTML + JS ──────────────────── */
   function writeDocument(html) {
     var app = document.getElementById('app-content');
 
@@ -48,23 +48,29 @@ const App = (function () {
     template.innerHTML = String(html || '');
 
     /*
-     * Get scripts
+     * Collect scripts before inserting HTML
      */
     var scripts = Array.from(
       template.content.querySelectorAll('script')
     );
 
     /*
-     * Remove scripts before inserting HTML
+     * Remove scripts temporarily
+     * so they can be executed manually
      */
     scripts.forEach(function (script) {
       script.remove();
     });
 
     /*
+     * Clear previous page
+     */
+    app.replaceChildren();
+
+    /*
      * Insert backend HTML
      */
-    app.replaceChildren(
+    app.appendChild(
       template.content.cloneNode(true)
     );
 
@@ -72,35 +78,57 @@ const App = (function () {
      * Execute backend scripts
      */
     scripts.forEach(function (oldScript) {
-      var newScript = document.createElement('script');
+
+      var newScript =
+        document.createElement('script');
 
       /*
-       * Copy attributes
+       * Copy all attributes
+       *
+       * Example:
+       * type
+       * src
+       * defer
+       * async
        */
-      Array.from(oldScript.attributes).forEach(function (attr) {
-        newScript.setAttribute(
-          attr.name,
-          attr.value
-        );
-      });
+      Array.from(oldScript.attributes).forEach(
+        function (attr) {
+
+          newScript.setAttribute(
+            attr.name,
+            attr.value
+          );
+
+        }
+      );
 
       /*
-       * Inline script
+       * External JS
        */
-      if (!oldScript.src) {
-        newScript.textContent =
-          oldScript.textContent || '';
-      } else {
-        /*
-         * External script
-         */
-        newScript.src = oldScript.src;
+      if (oldScript.src) {
+
+        newScript.src =
+          oldScript.src;
+
       }
 
       /*
-       * Classic script → global scope
+       * Inline JS
        */
-      document.body.appendChild(newScript);
+      else {
+
+        newScript.textContent =
+          oldScript.textContent || '';
+
+      }
+
+      /*
+       * Append inside app-content
+       *
+       * Script will execute automatically.
+       */
+      app.appendChild(newScript);
+
     });
   }
 
@@ -122,30 +150,52 @@ const App = (function () {
 
   /* ── Slug ──────────────────────────────────────── */
   function getSlug() {
-    var p = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    var p =
+      window.location.pathname
+        .replace(/^\/+|\/+$/g, '');
 
-    if (!p || p === 'home') return 'home';
+    if (!p || p === 'home') {
+      return 'home';
+    }
 
     return p;
   }
 
   /* ── Auth ──────────────────────────────────────── */
   async function ensureAuth() {
+
     if (!csrfToken) {
-      var r = await api('GET', '/auth/csrf');
+
+      var r =
+        await api(
+          'GET',
+          '/auth/csrf'
+        );
 
       if (r.csrfToken) {
-        csrfToken = r.csrfToken;
+        csrfToken =
+          r.csrfToken;
       }
+
     }
 
     if (!authChecked) {
-      var me = await api('GET', '/auth/me');
 
-      if (!me.success) return false;
+      var me =
+        await api(
+          'GET',
+          '/auth/me'
+        );
 
-      currentUser = me.data.user;
+      if (!me.success) {
+        return false;
+      }
+
+      currentUser =
+        me.data.user;
+
       authChecked = true;
+
     }
 
     return true;
@@ -159,166 +209,276 @@ const App = (function () {
 
   /* ── Init ──────────────────────────────────────── */
   async function init() {
-    var slug = getSlug();
+
+    var slug =
+      getSlug();
 
     if (slug === 'login') {
+
       await initLogin();
+
       return;
     }
 
     try {
-      var ok = await ensureAuth();
+
+      /*
+       * Check authentication
+       */
+      var ok =
+        await ensureAuth();
 
       if (!ok) {
-        window.location.href = '/login';
+
+        window.location.href =
+          '/login';
+
         return;
       }
 
-      var res = await api(
-        'GET',
-        '/pages/' + encodeURIComponent(slug)
-      );
+      /*
+       * Request backend page
+       */
+      var res =
+        await api(
+          'GET',
+          '/pages/' +
+          encodeURIComponent(slug)
+        );
 
+      /*
+       * Backend error
+       */
       if (!res.success) {
-        writeDocument(errorPage(res.error));
+
+        writeDocument(
+          errorPage(res.error)
+        );
+
         return;
       }
 
       /*
        * Backend response:
        *
-       * res.data.content
+       * {
+       *   success: true,
+       *   data: {
+       *     page: "home",
+       *     content: "<button>...</button><script>...</script>",
+       *     user: {...}
+       *   }
+       * }
        *
-       * এখানে HTML + script আছে
+       * Only content is injected.
        */
-      writeDocument(res.data.content);
+      writeDocument(
+        res.data.content
+      );
 
     } catch (err) {
-      var app = document.getElementById('app-content');
+
+      var app =
+        document.getElementById(
+          'app-content'
+        );
 
       if (app) {
+
         app.innerHTML =
           '<h2>Something went wrong.</h2>';
+
       }
+
     }
   }
 
   /* ── Login ─────────────────────────────────────── */
   async function initLogin() {
+
     if (!csrfToken) {
-      var r = await api('GET', '/auth/csrf');
+
+      var r =
+        await api(
+          'GET',
+          '/auth/csrf'
+        );
 
       if (r.csrfToken) {
-        csrfToken = r.csrfToken;
+        csrfToken =
+          r.csrfToken;
       }
+
     }
 
-    var me = await api('GET', '/auth/me');
+    var me =
+      await api(
+        'GET',
+        '/auth/me'
+      );
 
     if (me.success) {
-      window.location.href = '/home';
+
+      window.location.href =
+        '/home';
+
     }
   }
 
   async function login(isAdmin) {
+
     var username =
-      document.getElementById('login-username').value.trim();
+      document
+        .getElementById(
+          'login-username'
+        )
+        .value
+        .trim();
 
     var password =
-      document.getElementById('login-password').value;
+      document
+        .getElementById(
+          'login-password'
+        )
+        .value;
 
     var errEl =
-      document.getElementById('login-error');
+      document.getElementById(
+        'login-error'
+      );
 
     var btn =
-      document.getElementById('login-btn');
+      document.getElementById(
+        'login-btn'
+      );
 
-    errEl.style.display = 'none';
+    errEl.style.display =
+      'none';
 
     if (!username || !password) {
+
       errEl.textContent =
         'Enter username and password.';
 
-      errEl.style.display = 'block';
+      errEl.style.display =
+        'block';
+
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Signing in...';
+    btn.textContent =
+      'Signing in...';
 
     try {
-      var res = await api(
-        'POST',
-        isAdmin
-          ? '/auth/admin-login'
-          : '/auth/login',
-        {
-          username: username,
-          password: password
-        }
-      );
+
+      var res =
+        await api(
+          'POST',
+          isAdmin
+            ? '/auth/admin-login'
+            : '/auth/login',
+          {
+            username: username,
+            password: password
+          }
+        );
 
       if (res.success) {
+
         resetSession();
 
         window.location.href =
-          isAdmin ? '/admin' : '/home';
+          isAdmin
+            ? '/admin'
+            : '/home';
 
         return;
       }
 
       errEl.textContent =
         res.error +
-        (res.attemptsRemaining != null
-          ? ' (' + res.attemptsRemaining + ' left)'
-          : '');
+        (
+          res.attemptsRemaining != null
+            ? ' (' +
+              res.attemptsRemaining +
+              ' left)'
+            : ''
+        );
 
-      errEl.style.display = 'block';
+      errEl.style.display =
+        'block';
 
       btn.disabled = false;
-      btn.textContent = 'Sign In';
+      btn.textContent =
+        'Sign In';
 
     } catch (err) {
+
       errEl.textContent =
         'Network error. Please try again.';
 
-      errEl.style.display = 'block';
+      errEl.style.display =
+        'block';
 
       btn.disabled = false;
-      btn.textContent = 'Sign In';
+      btn.textContent =
+        'Sign In';
+
     }
   }
 
   /* ── Logout ────────────────────────────────────── */
   async function logout() {
+
     try {
-      await api('POST', '/auth/logout');
+
+      await api(
+        'POST',
+        '/auth/logout'
+      );
+
     } catch (err) {}
 
     resetSession();
 
-    window.location.href = '/login';
+    window.location.href =
+      '/login';
   }
 
   /* ── Helpers ───────────────────────────────────── */
   function esc(s) {
-    var d = document.createElement('div');
 
-    d.textContent = s || '';
+    var d =
+      document.createElement(
+        'div'
+      );
+
+    d.textContent =
+      s || '';
 
     return d.innerHTML;
   }
 
   /* ── Public API ────────────────────────────────── */
   return {
+
     init: init,
+
     initLogin: initLogin,
+
     login: login,
+
     logout: logout,
+
     api: api,
+
     getCsrf: getCsrf,
+
     esc: esc,
+
     getSlug: getSlug
+
   };
 
 })();
