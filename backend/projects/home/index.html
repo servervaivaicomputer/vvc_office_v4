@@ -1,10 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+      maximum-scale=1.0, user-scalable=no">
 
-hello from backend
-<button onclick="test()">Click</button>
+<title>Welcome</title>
 
-    <script>
-        function test() {
-            alert("Working!");
-        }
-    </script>
-<script src="/js/app.js"></script>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,
+body{
+    width:100%;
+    height:100%;
+}
+
+body{
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "SF Pro Text",
+        "Segoe UI",
+        sans-serif;
+
+    background:#f7f7f5;
+    color:#111;
+
+    overflow:hidden;
+}
+
+
+/* =========================
+   MAIN PAGE
+========================= */
+
+.page{
+    position:relative;
+
+    width:100%;
+    height:100dvh;
+    min-height:550px;
+
+    overflow:hidden;
+
+    background:#f7f7f5;
+}
+
+
+/* =========================
+   SOFT LIGHT BACKGROUND
+========================= */
+
+.glow{
+    position:absolute;
+
+    width:500px;
+    height:500px;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-58%);
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(185,205,255,.34) 0%,
+            rgba(215,225,255,.20) 32%,
+            rgba(247,247,245,0) 70%
+        );
+
+    filter:blur(8px);
+
+    pointer-events:none;
+}
+
+
+/* =========================
+   CONTENT
+========================= */
+
+.content{
+    position:relative;
+
+    width:88%;
+    max-width:430px;
+
+    height:100%;
+
+    margin:0 auto;
+
+    text-align:center;
+
+    z-index:5;
+}
+
+
+/* =========================
+   WELCOME
+========================= */
+
+.title{
+    position:absolute;
+
+    top:46%;
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:100%;
+
+    font-size:clamp(42px,11vw,58px);
+
+    line-height:1;
+
+    font-weight:750;
+
+    letter-spacing:-2px;
+
+    color:#111;
+}
+
+
+/* =========================
+   START BUTTON
+========================= */
+
+.start-btn{
+    position:absolute;
+
+    left:0;
+    right:0;
+
+    bottom:70px;
+
+    width:100%;
+    height:62px;
+
+    border:none;
+
+    border-radius:32px;
+
+    background:#171717;
+
+    color:#fff;
+
+    font-size:20px;
+
+    font-weight:650;
+
+    cursor:pointer;
+
+    box-shadow:
+        0 12px 30px rgba(0,0,0,.13);
+
+    transition:
+        transform .15s ease,
+        box-shadow .15s ease;
+}
+
+.start-btn:active{
+    transform:scale(.97);
+
+    box-shadow:
+        0 7px 18px rgba(0,0,0,.10);
+}
+
+
+/* =========================
+   POPUP OVERLAY
+========================= */
+
+.popup-overlay{
+    position:fixed;
+
+    inset:0;
+
+    z-index:9999;
+
+    display:flex;
+
+    align-items:flex-end;
+    justify-content:center;
+
+    background:rgba(20,20,20,.12);
+
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+
+    opacity:0;
+    visibility:hidden;
+
+    transition:
+        opacity .25s ease,
+        visibility .25s ease;
+}
+
+.popup-overlay.show{
+    opacity:1;
+    visibility:visible;
+}
+
+
+/* =========================
+   POPUP
+========================= */
+
+.popup{
+    width:100%;
+    max-width:520px;
+
+    background:rgba(255,255,255,.98);
+
+    border-radius:30px 30px 0 0;
+
+    padding:
+        10px 24px
+        calc(25px + env(safe-area-inset-bottom));
+
+    text-align:center;
+
+    box-shadow:
+        0 -15px 45px rgba(0,0,0,.12);
+
+    transform:translateY(110%);
+
+    transition:
+        transform .42s cubic-bezier(.22,1,.36,1);
+}
+
+.popup-overlay.show .popup{
+    transform:translateY(0);
+}
+
+
+/* =========================
+   POPUP HANDLE
+========================= */
+
+.popup-handle{
+    width:42px;
+    height:5px;
+
+    margin:0 auto 25px;
+
+    border-radius:10px;
+
+    background:#d5d5d5;
+}
+
+
+/* =========================
+   POPUP TITLE
+========================= */
+
+.popup h2{
+    font-size:28px;
+
+    line-height:1.1;
+
+    font-weight:750;
+
+    letter-spacing:-.7px;
+
+    margin-bottom:10px;
+}
+
+
+/* =========================
+   POPUP MESSAGE
+========================= */
+
+.popup-message{
+    margin:0 auto 25px;
+
+    max-width:390px;
+
+    font-size:16px;
+
+    line-height:1.5;
+
+    color:#707070;
+}
+
+
+/* =========================
+   POPUP OK BUTTON
+========================= */
+
+.popup-ok{
+    width:100%;
+    height:56px;
+
+    border:none;
+
+    border-radius:29px;
+
+    background:#171717;
+
+    color:#fff;
+
+    font-size:19px;
+
+    font-weight:650;
+
+    cursor:pointer;
+
+    transition:
+        transform .15s ease,
+        opacity .15s ease;
+}
+
+.popup-ok:active{
+    transform:scale(.97);
+    opacity:.85;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:390px){
+
+    .title{
+        top:46%;
+        font-size:43px;
+    }
+
+    .start-btn{
+        height:58px;
+        bottom:70px;
+    }
+
+    .popup{
+        border-radius:27px 27px 0 0;
+
+        padding-left:20px;
+        padding-right:20px;
+    }
+}
+
+
+/* =========================
+   VERY SHORT SCREEN
+========================= */
+
+@media(max-height:650px){
+
+    .title{
+        top:44%;
+    }
+
+    .start-btn{
+        bottom:55px;
+    }
+}
+</style>
+</head>
+
+
+<body>
+
+<div class="page">
+
+    <!-- Soft background glow -->
+    <div class="glow"></div>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- Center Welcome -->
+        <h1 class="title">
+            Welcome
+        </h1>
+
+
+        <!-- Bottom Start Button -->
+        <button
+            id="startBtn"
+            class="start-btn"
+            type="button">
+
+            Get Started
+
+        </button>
+
+    </main>
+
+
+    <!-- =========================
+         CUSTOM BOTTOM POPUP
+    ========================== -->
+
+    <div
+        id="popupOverlay"
+        class="popup-overlay">
+
+        <div class="popup">
+
+            <!-- iPhone style handle -->
+            <div class="popup-handle"></div>
+
+
+            <h2>
+                Welcome
+            </h2>
+
+
+            <p class="popup-message">
+                You're ready to get started.
+                Continue to the next step.
+            </p>
+
+
+            <button
+                id="popupOk"
+                class="popup-ok"
+                type="button">
+
+                OK
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const startBtn =
+    document.getElementById("startBtn");
+
+const popupOverlay =
+    document.getElementById("popupOverlay");
+
+const popupOk =
+    document.getElementById("popupOk");
+
+
+/* =========================
+   GET STARTED
+========================= */
+
+startBtn.addEventListener("click", function(){
+
+    popupOverlay.classList.add("show");
+
+});
+
+
+/* =========================
+   OK → /about
+========================= */
+
+popupOk.addEventListener("click", function(){
+
+    window.location.href = "/about";
+
+});
+
+
+/* =========================
+   CLOSE BY OUTSIDE TAP
+========================= */
+
+popupOverlay.addEventListener("click", function(event){
+
+    if(event.target === popupOverlay){
+
+        popupOverlay.classList.remove("show");
+
+    }
+
+});
+
+
+/* =========================
+   ESCAPE
+========================= */
+
+document.addEventListener("keydown", function(event){
+
+    if(event.key === "Escape"){
+
+        popupOverlay.classList.remove("show");
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
