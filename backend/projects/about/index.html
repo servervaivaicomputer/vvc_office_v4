@@ -1,13 +1,223 @@
-<div class="page-header">
-  <span class="page-badge">About</span>
-  <h1>About</h1>
-  <p class="page-subtitle">About This Application</p>
-</div>
-<div class="page-body">
-  <div class="card">
-    <h2>About Page</h2>
-    <p>This is About Page. This private content is served from the backend only after full authentication and page-level permission verification.</p>
-  </div>
-</div>
-hello from backend
-<script src="/js/app.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f7f7f5;
+      color: #111;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                   "SF Pro Text", "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      width: 280px;
+      height: 280px;
+      top: -100px;
+      right: -90px;
+      background: rgba(0, 0, 0, 0.035);
+      border-radius: 50%;
+      filter: blur(45px);
+      pointer-events: none;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 55px 24px 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-top: 25px;
+    }
+
+    .header h1 {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+    }
+
+    .header p {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #777;
+    }
+
+    /* Main content */
+    .content {
+      margin-top: 55px;
+      flex: 1;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section h2 {
+      font-size: 21px;
+      font-weight: 650;
+      letter-spacing: -0.4px;
+      margin-bottom: 11px;
+    }
+
+    .section p {
+      font-size: 15px;
+      line-height: 1.75;
+      color: #666;
+    }
+
+    /* Info card */
+    .info-card {
+      margin-top: 35px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 22px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.035);
+      backdrop-filter: blur(12px);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-row span:first-child {
+      color: #777;
+      font-size: 14px;
+    }
+
+    .info-row span:last-child {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Button */
+    .continue-btn {
+      width: 100%;
+      height: 58px;
+      border: none;
+      border-radius: 18px;
+      background: #111;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.12);
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+
+    .continue-btn:active {
+      transform: scale(0.97);
+      opacity: 0.85;
+    }
+
+    /* Bottom spacing */
+    .bottom {
+      margin-top: 30px;
+    }
+
+    @media (max-height: 650px) {
+      .page {
+        padding-top: 35px;
+      }
+
+      .content {
+        margin-top: 35px;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page">
+
+    <header class="header">
+      <h1>About</h1>
+      <p>A simple space to get started.</p>
+    </header>
+
+    <section class="content">
+
+      <div class="section">
+        <h2>Welcome</h2>
+        <p>
+          Everything is designed to keep things simple, clean and easy to use.
+          Explore the experience and continue whenever you're ready.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>Made for simplicity</h2>
+        <p>
+          A minimal interface with a smooth experience, focused only on what
+          you need without unnecessary elements.
+        </p>
+      </div>
+
+      <div class="info-card">
+
+        <div class="info-row">
+          <span>Version</span>
+          <span>1.0.0</span>
+        </div>
+
+        <div class="info-row">
+          <span>Design</span>
+          <span>Minimal</span>
+        </div>
+
+        <div class="info-row">
+          <span>Experience</span>
+          <span>Simple & Clean</span>
+        </div>
+
+      </div>
+
+    </section>
+
+    <div class="bottom">
+      <button class="continue-btn" onclick="goNext()">
+        Continue
+      </button>
+    </div>
+
+  </main>
+
+  <script>
+    function goNext() {
+      window.location.href = "/workspace";
+    }
+  </script>
+
+</body>
+</html>
