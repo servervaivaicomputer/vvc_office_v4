@@ -9,22 +9,13 @@ const routes = require('./routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ── Security headers ─────────────────────────────── */
+/* ── Security headers (CSP disabled for inline JS) ── */
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"]
-    }
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 
-/* ── CORS — Public (any origin allowed) ───────────── */
+/* ── CORS ─────────────────────────────────────────── */
 app.use(cors({
   origin: true,
   credentials: true,
@@ -59,6 +50,10 @@ app.use('/api/auth/admin-login', loginLimiter);
 app.use('/api/', apiLimiter);
 
 app.set('trust proxy', 1);
+
+/* ── Static files ─────────────────────────────────── */
+const path = require('path');
+app.use('/js', express.static(path.join(__dirname, '..', 'frontend', 'js')));
 
 /* ── Routes ───────────────────────────────────────── */
 app.use(routes);
