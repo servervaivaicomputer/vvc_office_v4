@@ -105,7 +105,6 @@
     </div>
     <div class="adm-body">
 
-      <!-- Dashboard -->
       <div id="t-dashboard" class="tp on">
         <div class="st-grid" id="st-row"></div>
         <div class="d-card">
@@ -120,7 +119,6 @@
         </div>
       </div>
 
-      <!-- Users -->
       <div id="t-users" class="tp">
         <div class="d-card">
           <div class="d-head"><h3>All Users</h3><button class="abtn pri" onclick="AP.showCU()">+ Create User</button></div>
@@ -128,7 +126,6 @@
         </div>
       </div>
 
-      <!-- Views -->
       <div id="t-views" class="tp">
         <div class="st-grid" id="vw-st"></div>
         <div class="d-card">
@@ -144,7 +141,6 @@
         </div>
       </div>
 
-      <!-- Activity -->
       <div id="t-activity" class="tp">
         <div class="d-card">
           <div class="d-head">
@@ -158,7 +154,6 @@
         </div>
       </div>
 
-      <!-- Failed Logins -->
       <div id="t-failed" class="tp">
         <div class="d-card">
           <div class="d-head">
@@ -194,10 +189,8 @@ function toggleSide(){var s=document.getElementById('adm-side');var o=document.g
 
   var AP=window.AP={};
 
-  /* ── Dashboard ──────────────────────────────── */
   AP.load_dashboard=async function(){var r=await api('GET','/admin/stats');if(!r.data)return;var s=r.data;document.getElementById('st-row').innerHTML=sc('Total Users',s.totalUsers,'w1','◉')+sc('Today Views',s.views.today,'w2','▣')+sc('7-Day Views',s.views.sevenDays,'w3','▣')+sc('Blocked',s.blockedUsers,'w4','⚑');var a=await api('GET','/admin/activity?limit=5');if(!a.data)return;document.querySelector('#tb-da tbody').innerHTML=a.data.map(function(x){return '<tr><td class="cu">'+ec(x.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(x.action)+'</span></td><td>'+ec(x.details||'—')+'</td><td class="cm">'+ft(x.created_at)+'</td></tr>'}).join('')||'<tr><td colspan="4"><div class="empty">No activity yet</div></td></tr>'};
 
-  /* ── Users ──────────────────────────────────── */
   AP.load_users=async function(){var r=await api('GET','/admin/users');if(!r.data)return;var rl=await api('GET','/admin/roles');window._rl=rl.data||[];document.querySelector('#tb-us tbody').innerHTML=r.data.map(function(u){return '<tr><td class="cu">'+ec(u.username)+'</td><td class="cm">'+ec(u.email)+'</td><td><select onchange="AP.chRole(\''+u.id+'\',this.value)">'+(window._rl||[]).map(function(r){return '<option value="'+r.id+'"'+(r.name===u.role?' selected':'')+'>'+r.name+'</option>'}).join('')+'</select></td><td>'+(u.isBlocked?'<span class="bg bg-bl">Blocked</span>':'<span class="bg bg-ok">Active</span>')+'</td><td class="cm">'+u.failedLoginAttempts+'</td><td class="cm">'+ft(u.lastLogin)+'</td><td>'+(u.isBlocked?'<button class="abtn sm" onclick="AP.unblock(\''+u.id+'\')">Unblock</button>':'<button class="abtn dng sm" onclick="AP.block(\''+u.id+'\')">Block</button>')+'</td></tr>'}).join('')||'<tr><td colspan="7"><div class="empty">No users</div></td></tr>'};
   AP.showCU=function(){document.getElementById('cu-form').style.display='flex'};
   AP.hideCU=function(){document.getElementById('cu-form').style.display='none'};
@@ -206,52 +199,19 @@ function toggleSide(){var s=document.getElementById('adm-side');var o=document.g
   AP.unblock=async function(id){await api('POST','/admin/users/'+id+'/unblock',{});AP.load_users()};
   AP.chRole=async function(id,r){await api('PUT','/admin/users/'+id+'/role',{roleId:parseInt(r)})};
 
-  /* ── Views ──────────────────────────────────── */
   AP.load_views=async function(){var pg=document.getElementById('vw-p')?.value||'';var r=await api('GET','/admin/views?page='+pg);if(!r.data)return;document.getElementById('vw-st').innerHTML=sc('Today',r.data.stats.today,'w2','▣')+sc('7 Days',r.data.stats.sevenDays,'w3','▣')+sc('30 Days',r.data.stats.thirtyDays,'w1','▣');document.querySelector('#tb-vw tbody').innerHTML=(r.data.views||[]).map(function(v){return '<tr><td><span class="bg bg-ac">'+ec(v.page_slug)+'</span></td><td class="cu">'+ec(v.users?.username||'—')+'</td><td class="cm">'+ec(v.ip_address||'—')+'</td><td class="cd">'+ec((v.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(v.viewed_at)+'</td></tr>'}).join('')||'<tr><td colspan="5"><div class="empty">No views</div></td></tr>'};
 
-  /* ── Activity ───────────────────────────────── */
   AP.load_activity=async function(){var r=await api('GET','/admin/activity');if(!r.data)return;document.querySelector('#tb-ac tbody').innerHTML=r.data.map(function(a){return '<tr><td class="cu">'+ec(a.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(a.action)+'</span></td><td>'+ec(a.details||'—')+'</td><td class="cm">'+ec(a.ip_address||'—')+'</td><td class="cm">'+ft(a.created_at)+'</td></tr>'}).join('')||'<tr><td colspan="5"><div class="empty">No activity</div></td></tr>'};
 
-  /* ── Failed ─────────────────────────────────── */
   AP.load_failed=async function(){var r=await api('GET','/admin/failed-logins');if(!r.data)return;document.querySelector('#tb-fl tbody').innerHTML=r.data.map(function(x){return '<tr><td class="cu">'+ec(x.username)+'</td><td class="cm">'+ec(x.ip_address||'—')+'</td><td class="cd">'+ec((x.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(x.attempted_at)+'</td></tr>'}).join('')||'<tr><td colspan="4"><div class="empty">No failed attempts</div></td></tr>'};
 
-  /* ── Clear functions ────────────────────────── */
-  AP.clearViews=async function(){
-    var range=document.getElementById('clr-vw').value;
-    if(!confirm('Clear views: '+range+'?'))return;
-    var r=await api('DELETE','/admin/clear/views/'+range);
-    if(r.success){alert('Views cleared: '+range);AP.load_views()}else{alert(r.error||'Failed')}
-  };
+  AP.clearViews=async function(){var range=document.getElementById('clr-vw').value;if(!confirm('Clear views: '+range+'?'))return;var r=await api('DELETE','/admin/clear/views/'+range);if(r.success){alert('Views cleared: '+range);AP.load_views()}else{alert(r.error||'Failed')}};
+  AP.clearActivity=async function(){var range=document.getElementById('clr-ac').value;if(!confirm('Clear activity: '+range+'?'))return;var r=await api('DELETE','/admin/clear/activity/'+range);if(r.success){alert('Activity cleared: '+range);AP.load_activity()}else{alert(r.error||'Failed')}};
+  AP.clearFailed=async function(){var range=document.getElementById('clr-fl').value;if(!confirm('Clear failed logins: '+range+'?'))return;var r=await api('DELETE','/admin/clear/failed/'+range);if(r.success){alert('Failed logins cleared: '+range);AP.load_failed()}else{alert(r.error||'Failed')}};
+  AP.clearAll=async function(){var range=document.getElementById('clr-dash').value;if(!confirm('Clear ALL data ('+range+')?'))return;var r=await api('DELETE','/admin/clear/all/'+range);if(r.success){alert('All data cleared: '+range);AP.load_dashboard()}else{alert(r.error||'Failed')}};
 
-  AP.clearActivity=async function(){
-    var range=document.getElementById('clr-ac').value;
-    if(!confirm('Clear activity: '+range+'?'))return;
-    var r=await api('DELETE','/admin/clear/activity/'+range);
-    if(r.success){alert('Activity cleared: '+range);AP.load_activity()}else{alert(r.error||'Failed')}
-  };
-
-  AP.clearFailed=async function(){
-    var range=document.getElementById('clr-fl').value;
-    if(!confirm('Clear failed logins: '+range+'?'))return;
-    var r=await api('DELETE','/admin/clear/failed/'+range);
-    if(r.success){alert('Failed logins cleared: '+range);AP.load_failed()}else{alert(r.error||'Failed')}
-  };
-
-  AP.clearAll=async function(){
-    var range=document.getElementById('clr-dash').value;
-    if(!confirm('Clear ALL data ('+range+')? (views + activity + failed logins)'))return;
-    var r=await api('DELETE','/admin/clear/views/'+range);
-    var r2=await api('DELETE','/admin/clear/activity/'+range);
-    var r3=await api('DELETE','/admin/clear/failed/'+range);
-    if(r.success||r2.success||r3.success){alert('All data cleared: '+range);AP.load_dashboard()}
-  };
-
-  /* ── Search ─────────────────────────────────── */
   AP.search=function(q){q=q.toLowerCase();document.querySelectorAll('.dt tbody tr').forEach(function(tr){tr.style.display=tr.textContent.toLowerCase().indexOf(q)>-1?'':'none'})};
-
-  /* ── Helper ─────────────────────────────────── */
   function sc(l,v,c,ic){return '<div class="st-card"><div class="st-top"><div class="st-ic '+c+'">'+ic+'</div></div><div class="st-num">'+(v||0)+'</div><div class="st-lbl">'+l+'</div></div>'}
-
   AP.load_dashboard();
 })();
 </script>
