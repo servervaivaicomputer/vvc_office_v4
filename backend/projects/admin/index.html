@@ -1,705 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — SecureApp</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-  .adm {
-    min-height: 100vh;
-    background: #faf8f5;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    display: flex;
-    color: #3d3530;
-  }
-
-  /* ── Sidebar ──────────────────────────────────── */
-  .adm-side {
-    width: 250px;
-    background: rgba(255,255,255,.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(0,0,0,.06);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 100;
-    transition: transform .3s ease;
-  }
-
-  .adm-brand {
-    padding: 1.5rem 1.25rem 1.25rem;
-    border-bottom: 1px solid rgba(0,0,0,.06);
-  }
-
-  .adm-brand h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #2c2420;
-    letter-spacing: -0.02em;
-  }
-
-  .adm-brand span {
-    font-size: 0.6rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: #b47a4a;
-    background: rgba(180,122,74,.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    margin-left: 0.5rem;
-    position: relative;
-    top: -1px;
-  }
-
-  .adm-nav {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    overflow-y: auto;
-  }
-
-  .adm-nav-label {
-    font-size: 0.6rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: #b8a898;
-    padding: 0.85rem 0.5rem 0.35rem;
-  }
-
-  .adm-nav button {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    width: 100%;
-    padding: 0.6rem 0.75rem;
-    border: none;
-    background: none;
-    color: #8a7e74;
-    font-size: 0.82rem;
-    font-family: inherit;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: left;
-    margin-bottom: 2px;
-  }
-
-  .adm-nav button:hover {
-    background: rgba(180,122,74,.06);
-    color: #5a4e44;
-  }
-
-  .adm-nav button.on {
-    background: rgba(180,122,74,.12);
-    color: #9a6840;
-    font-weight: 600;
-  }
-
-  .adm-nav button .ni {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    opacity: 0.6;
-  }
-
-  .adm-nav button.on .ni { opacity: 1; }
-
-  .adm-side-foot {
-    padding: 1rem 1.25rem;
-    border-top: 1px solid rgba(0,0,0,.06);
-  }
-
-  .adm-side-foot .pill {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .adm-side-foot .av {
-    width: 34px;
-    height: 34px;
-    background: linear-gradient(135deg, #c4956a, #e8c5a0);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #fff;
-  }
-
-  .adm-side-foot .uinfo {
-    font-size: 0.82rem;
-    color: #3d3530;
-    font-weight: 500;
-  }
-
-  .adm-side-foot .uinfo small {
-    display: block;
-    font-size: 0.68rem;
-    color: #b8a898;
-    font-weight: 400;
-  }
-
-  .adm-side-foot .btn-out {
-    width: 100%;
-    padding: 0.55rem;
-    background: rgba(0,0,0,.03);
-    border: 1px solid rgba(0,0,0,.07);
-    color: #8a7e74;
-    font-size: 0.78rem;
-    font-family: inherit;
-    font-weight: 500;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .adm-side-foot .btn-out:hover {
-    background: rgba(196,57,44,.06);
-    border-color: rgba(196,57,44,.15);
-    color: #c4392c;
-  }
-
-  /* ── Main ──────────────────────────────────────── */
-  .adm-main {
-    flex: 1;
-    margin-left: 250px;
-    min-height: 100vh;
-    min-width: 0;
-  }
-
-  .adm-top {
-    height: 62px;
-    background: rgba(255,255,255,.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.75rem;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
-
-  .adm-top-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .adm-menu {
-    display: none;
-    background: none;
-    border: 1px solid rgba(0,0,0,.08);
-    color: #5a4e44;
-    font-size: 1.15rem;
-    cursor: pointer;
-    padding: 0.35rem 0.55rem;
-    border-radius: 8px;
-    line-height: 1;
-  }
-
-  .adm-top h2 {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #2c2420;
-  }
-
-  .adm-search {
-    padding: 0.5rem 0.85rem;
-    background: rgba(0,0,0,.03);
-    border: 1px solid rgba(0,0,0,.07);
-    border-radius: 10px;
-    color: #3d3530;
-    font-size: 0.82rem;
-    font-family: inherit;
-    outline: none;
-    width: 220px;
-    transition: all 0.2s;
-  }
-
-  .adm-search:focus {
-    border-color: rgba(180,122,74,.3);
-    background: rgba(255,255,255,.9);
-    box-shadow: 0 0 0 3px rgba(180,122,74,.08);
-  }
-
-  .adm-search::placeholder { color: #c4b8aa; }
-
-  .adm-body {
-    padding: 1.75rem;
-  }
-
-  /* ── Tab panels ────────────────────────────────── */
-  .tp { display: none; animation: _aIn 0.3s ease both; }
-  .tp.on { display: block; }
-  @keyframes _aIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* ── Stats ─────────────────────────────────────── */
-  .st-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.75rem;
-  }
-
-  .st-card {
-    background: rgba(255,255,255,.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0,0,0,.05);
-    border-radius: 14px;
-    padding: 1.25rem;
-    transition: all 0.25s ease;
-  }
-
-  .st-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,.06);
-    border-color: rgba(180,122,74,.15);
-  }
-
-  .st-card .st-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.85rem;
-  }
-
-  .st-card .st-ic {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-  }
-
-  .st-ic.w1 { background: rgba(180,122,74,.1); color: #b47a4a; }
-  .st-ic.w2 { background: rgba(106,168,79,.1); color: #6aa84f; }
-  .st-ic.w3 { background: rgba(100,149,205,.1); color: #6495cd; }
-  .st-ic.w4 { background: rgba(200,120,80,.1); color: #c87850; }
-
-  .st-card .st-num {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #2c2420;
-    line-height: 1;
-    margin-bottom: 0.2rem;
-  }
-
-  .st-card .st-lbl {
-    font-size: 0.7rem;
-    color: #b8a898;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 500;
-  }
-
-  /* ── Data card ─────────────────────────────────── */
-  .d-card {
-    background: rgba(255,255,255,.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0,0,0,.05);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 1.25rem;
-  }
-
-  .d-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgba(0,0,0,.05);
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .d-head h3 {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #2c2420;
-  }
-
-  .d-body {
-    padding: 0.5rem 1.25rem 1.25rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* ── Table ─────────────────────────────────────── */
-  .dt {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-    min-width: 550px;
-  }
-
-  .dt th {
-    text-align: left;
-    padding: 0.7rem 0.65rem;
-    font-size: 0.66rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #b8a898;
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    white-space: nowrap;
-  }
-
-  .dt td {
-    padding: 0.65rem 0.65rem;
-    color: #5a4e44;
-    border-bottom: 1px solid rgba(0,0,0,.03);
-    vertical-align: middle;
-  }
-
-  .dt tbody tr {
-    transition: background 0.15s;
-  }
-
-  .dt tbody tr:hover {
-    background: rgba(180,122,74,.04);
-  }
-
-  .dt .cu { color: #2c2420; font-weight: 500; }
-  .dt .cm { font-size: 0.72rem; color: #b8a898; }
-  .dt .cd { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; color: #b8a898; }
-
-  .dt select {
-    padding: 0.3rem 0.5rem;
-    background: rgba(0,0,0,.03);
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 6px;
-    color: #5a4e44;
-    font-size: 0.72rem;
-    font-family: inherit;
-    outline: none;
-  }
-
-  .dt select:focus {
-    border-color: rgba(180,122,74,.3);
-  }
-
-  .dt select option { background: #faf8f5; }
-
-  /* ── Badges ────────────────────────────────────── */
-  .bg {
-    display: inline-block;
-    font-size: 0.64rem;
-    font-weight: 600;
-    padding: 0.18rem 0.5rem;
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .bg-ok { background: rgba(106,168,79,.12); color: #6aa84f; }
-  .bg-bl { background: rgba(196,57,44,.08); color: #c4392c; }
-  .bg-ac { background: rgba(180,122,74,.1); color: #b47a4a; }
-  .bg-w { background: rgba(200,160,80,.1); color: #b8960a; }
-
-  /* ── Buttons ───────────────────────────────────── */
-  .abtn {
-    padding: 0.45rem 0.9rem;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-family: inherit;
-    font-weight: 500;
-    cursor: pointer;
-    background: rgba(255,255,255,.6);
-    color: #5a4e44;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .abtn:hover {
-    border-color: rgba(0,0,0,.15);
-    background: rgba(255,255,255,.9);
-  }
-
-  .abtn.pri {
-    background: linear-gradient(135deg, #b47a4a, #c4956a);
-    border-color: transparent;
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(180,122,74,.2);
-  }
-
-  .abtn.pri:hover {
-    box-shadow: 0 4px 14px rgba(180,122,74,.3);
-    transform: translateY(-1px);
-  }
-
-  .abtn.dng {
-    border-color: rgba(196,57,44,.15);
-    color: #c4392c;
-  }
-
-  .abtn.dng:hover {
-    background: rgba(196,57,44,.06);
-    border-color: rgba(196,57,44,.3);
-  }
-
-  .abtn.sm { padding: 0.3rem 0.65rem; font-size: 0.72rem; border-radius: 6px; }
-
-  /* ── Form inputs ───────────────────────────────── */
-  .fi { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
-
-  .fi input, .fi select {
-    padding: 0.5rem 0.75rem;
-    background: rgba(255,255,255,.7);
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 8px;
-    color: #3d3530;
-    font-size: 0.82rem;
-    font-family: inherit;
-    outline: none;
-    transition: all 0.2s;
-    min-width: 0;
-  }
-
-  .fi input:focus, .fi select:focus {
-    border-color: rgba(180,122,74,.35);
-    box-shadow: 0 0 0 3px rgba(180,122,74,.08);
-    background: #fff;
-  }
-
-  .fi input::placeholder { color: #c4b8aa; }
-  .fi select option { background: #faf8f5; }
-
-  /* ── Empty ─────────────────────────────────────── */
-  .empty {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    color: #c4b8aa;
-    font-size: 0.85rem;
-  }
-
-  /* ── Overlay ───────────────────────────────────── */
-  .adm-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.2);
-    z-index: 90;
-  }
-
-  .adm-overlay.on { display: block; }
-
-  /* ══════════════════════════════════════════════════
-     RESPONSIVE — Desktop (1200+)
-     ══════════════════════════════════════════════════ */
-  @media (min-width: 1200px) {
-    .adm-body { padding: 2rem 2.5rem; }
-  }
-
-  /* ══════════════════════════════════════════════════
-     RESPONSIVE — Tablet (768–1024)
-     ══════════════════════════════════════════════════ */
-  @media (max-width: 1024px) {
-    .st-grid { grid-template-columns: repeat(2, 1fr); }
-    .adm-body { padding: 1.25rem; }
-    .adm-search { width: 160px; }
-  }
-
-  /* ══════════════════════════════════════════════════
-     RESPONSIVE — Mobile (<768)
-     ══════════════════════════════════════════════════ */
-  @media (max-width: 768px) {
-    .adm-side {
-      transform: translateX(-100%);
-    }
-
-    .adm-side.open {
-      transform: translateX(0);
-      box-shadow: 4px 0 25px rgba(0,0,0,.1);
-    }
-
-    .adm-main { margin-left: 0; }
-
-    .adm-menu { display: block; }
-
-    .adm-top { padding: 0 1rem; height: 56px; }
-
-    .adm-search {
-      width: 120px;
-      padding: 0.4rem 0.7rem;
-      font-size: 0.78rem;
-    }
-
-    .adm-body { padding: 1rem; }
-
-    .st-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-
-    .st-card { padding: 1rem; }
-    .st-card .st-num { font-size: 1.5rem; }
-    .st-card .st-ic { width: 32px; height: 32px; border-radius: 8px; font-size: 0.85rem; }
-
-    .d-head { padding: 0.75rem 1rem; }
-    .d-body { padding: 0.25rem 0.75rem 0.75rem; }
-
-    .dt { min-width: 480px; }
-    .dt th, .dt td { padding: 0.5rem 0.5rem; font-size: 0.75rem; }
-  }
-
-  /* ══════════════════════════════════════════════════
-     RESPONSIVE — Small Mobile (<480)
-     ══════════════════════════════════════════════════ */
-  @media (max-width: 480px) {
-    .adm-top h2 { font-size: 0.9rem; }
-
-    .adm-search { width: 100px; font-size: 0.75rem; }
-
-    .st-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-
-    .st-card .st-num { font-size: 1.35rem; }
-    .st-card .st-lbl { font-size: 0.62rem; }
-
-    .d-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-    .d-head h3 { font-size: 0.85rem; }
-
-    .fi { gap: 0.4rem; }
-    .fi input, .fi select { font-size: 0.78rem; padding: 0.45rem 0.65rem; }
-
-    .abtn { font-size: 0.75rem; padding: 0.4rem 0.75rem; }
-  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #faf8f5; color: #3d3530; min-height: 100vh; }
+  .adm{min-height:100vh;display:flex}
+  .adm-side{width:250px;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
+  .adm-brand{padding:1.5rem 1.25rem 1.25rem;border-bottom:1px solid rgba(0,0,0,.06)}
+  .adm-brand h1{font-size:1.15rem;font-weight:700;color:#2c2420}
+  .adm-brand span{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#b47a4a;background:rgba(180,122,74,.1);padding:0.2rem 0.5rem;border-radius:4px;margin-left:0.5rem;position:relative;top:-1px}
+  .adm-nav{flex:1;padding:0.5rem 0.75rem;overflow-y:auto}
+  .adm-nav-label{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;color:#b8a898;padding:0.85rem 0.5rem 0.35rem}
+  .adm-nav button{display:flex;align-items:center;gap:0.65rem;width:100%;padding:0.6rem 0.75rem;border:none;background:none;color:#8a7e74;font-size:0.82rem;font-family:inherit;border-radius:10px;cursor:pointer;transition:all 0.2s;text-align:left;margin-bottom:2px}
+  .adm-nav button:hover{background:rgba(180,122,74,.06);color:#5a4e44}
+  .adm-nav button.on{background:rgba(180,122,74,.12);color:#9a6840;font-weight:600}
+  .adm-nav button .ni{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;opacity:0.6}
+  .adm-nav button.on .ni{opacity:1}
+  .adm-side-foot{padding:1rem 1.25rem;border-top:1px solid rgba(0,0,0,.06)}
+  .adm-side-foot .pill{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem}
+  .adm-side-foot .av{width:34px;height:34px;background:linear-gradient(135deg,#c4956a,#e8c5a0);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff}
+  .adm-side-foot .uinfo{font-size:0.82rem;color:#3d3530;font-weight:500}
+  .adm-side-foot .uinfo small{display:block;font-size:0.68rem;color:#b8a898;font-weight:400}
+  .adm-side-foot .btn-out{width:100%;padding:0.55rem;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.07);color:#8a7e74;font-size:0.78rem;font-family:inherit;font-weight:500;border-radius:8px;cursor:pointer;transition:all 0.2s}
+  .adm-side-foot .btn-out:hover{background:rgba(196,57,44,.06);border-color:rgba(196,57,44,.15);color:#c4392c}
+  .adm-main{flex:1;margin-left:250px;min-height:100vh;min-width:0}
+  .adm-top{height:62px;background:rgba(255,255,255,.75);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;padding:0 1.75rem;position:sticky;top:0;z-index:50}
+  .adm-top-left{display:flex;align-items:center;gap:0.75rem}
+  .adm-menu{display:none;background:none;border:1px solid rgba(0,0,0,.08);color:#5a4e44;font-size:1.15rem;cursor:pointer;padding:0.35rem 0.55rem;border-radius:8px;line-height:1}
+  .adm-top h2{font-size:1.05rem;font-weight:600;color:#2c2420}
+  .adm-search{padding:0.5rem 0.85rem;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.07);border-radius:10px;color:#3d3530;font-size:0.82rem;font-family:inherit;outline:none;width:220px;transition:all 0.2s}
+  .adm-search:focus{border-color:rgba(180,122,74,.3);background:rgba(255,255,255,.9);box-shadow:0 0 0 3px rgba(180,122,74,.08)}
+  .adm-search::placeholder{color:#c4b8aa}
+  .adm-body{padding:1.75rem}
+  .tp{display:none;animation:_aIn 0.3s ease both}.tp.on{display:block}
+  @keyframes _aIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .st-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem}
+  .st-card{background:rgba(255,255,255,.65);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.05);border-radius:14px;padding:1.25rem;transition:all 0.25s ease}
+  .st-card:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.06);border-color:rgba(180,122,74,.15)}
+  .st-card .st-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem}
+  .st-card .st-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+  .st-ic.w1{background:rgba(180,122,74,.1);color:#b47a4a}.st-ic.w2{background:rgba(106,168,79,.1);color:#6aa84f}.st-ic.w3{background:rgba(100,149,205,.1);color:#6495cd}.st-ic.w4{background:rgba(200,120,80,.1);color:#c87850}
+  .st-card .st-num{font-size:2rem;font-weight:700;color:#2c2420;line-height:1;margin-bottom:0.2rem}
+  .st-card .st-lbl{font-size:0.7rem;color:#b8a898;text-transform:uppercase;letter-spacing:0.06em;font-weight:500}
+  .d-card{background:rgba(255,255,255,.65);backdrop-filter:blur(12px);border:1px solid rgba(0,0,0,.05);border-radius:14px;overflow:hidden;margin-bottom:1.25rem}
+  .d-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,.05);flex-wrap:wrap;gap:0.5rem}
+  .d-head h3{font-size:0.92rem;font-weight:600;color:#2c2420}
+  .d-body{padding:0.5rem 1.25rem 1.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .dt{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:550px}
+  .dt th{text-align:left;padding:0.7rem 0.65rem;font-size:0.66rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#b8a898;border-bottom:1px solid rgba(0,0,0,.06);white-space:nowrap}
+  .dt td{padding:0.65rem 0.65rem;color:#5a4e44;border-bottom:1px solid rgba(0,0,0,.03);vertical-align:middle}
+  .dt tbody tr{transition:background 0.15s}.dt tbody tr:hover{background:rgba(180,122,74,.04)}
+  .dt .cu{color:#2c2420;font-weight:500}.dt .cm{font-size:0.72rem;color:#b8a898}.dt .cd{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;color:#b8a898}
+  .dt select{padding:0.3rem 0.5rem;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.08);border-radius:6px;color:#5a4e44;font-size:0.72rem;font-family:inherit;outline:none}.dt select:focus{border-color:rgba(180,122,74,.3)}.dt select option{background:#faf8f5}
+  .bg{display:inline-block;font-size:0.64rem;font-weight:600;padding:0.18rem 0.5rem;border-radius:6px;text-transform:uppercase;letter-spacing:0.04em}
+  .bg-ok{background:rgba(106,168,79,.12);color:#6aa84f}.bg-bl{background:rgba(196,57,44,.08);color:#c4392c}.bg-ac{background:rgba(180,122,74,.1);color:#b47a4a}
+  .abtn{padding:0.45rem 0.9rem;border:1px solid rgba(0,0,0,.08);border-radius:8px;font-size:0.78rem;font-family:inherit;font-weight:500;cursor:pointer;background:rgba(255,255,255,.6);color:#5a4e44;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.3rem}
+  .abtn:hover{border-color:rgba(0,0,0,.15);background:rgba(255,255,255,.9)}
+  .abtn.pri{background:linear-gradient(135deg,#b47a4a,#c4956a);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(180,122,74,.2)}
+  .abtn.pri:hover{box-shadow:0 4px 14px rgba(180,122,74,.3);transform:translateY(-1px)}
+  .abtn.dng{border-color:rgba(196,57,44,.15);color:#c4392c}.abtn.dng:hover{background:rgba(196,57,44,.06);border-color:rgba(196,57,44,.3)}
+  .abtn.sm{padding:0.3rem 0.65rem;font-size:0.72rem;border-radius:6px}
+  .fi{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+  .fi input,.fi select{padding:0.5rem 0.75rem;background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.08);border-radius:8px;color:#3d3530;font-size:0.82rem;font-family:inherit;outline:none;transition:all 0.2s;min-width:0}
+  .fi input:focus,.fi select:focus{border-color:rgba(180,122,74,.35);box-shadow:0 0 0 3px rgba(180,122,74,.08);background:#fff}
+  .fi input::placeholder{color:#c4b8aa}.fi select option{background:#faf8f5}
+  .empty{text-align:center;padding:2.5rem 1rem;color:#c4b8aa;font-size:0.85rem}
+  .clr-bar{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap}
+  .clr-bar select{padding:0.35rem 0.6rem;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.08);border-radius:6px;color:#5a4e44;font-size:0.78rem;font-family:inherit;outline:none}
+  .clr-bar select option{background:#faf8f5}
+  .adm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}.adm-overlay.on{display:block}
+  @media(max-width:1024px){.st-grid{grid-template-columns:repeat(2,1fr)}.adm-body{padding:1.25rem}.adm-search{width:160px}}
+  @media(max-width:768px){.adm-side{transform:translateX(-100%)}.adm-side.open{transform:translateX(0);box-shadow:4px 0 25px rgba(0,0,0,.1)}.adm-main{margin-left:0}.adm-menu{display:block}.adm-top{padding:0 1rem;height:56px}.adm-search{width:120px;padding:0.4rem 0.7rem;font-size:0.78rem}.adm-body{padding:1rem}.st-grid{grid-template-columns:repeat(2,1fr);gap:0.75rem}.st-card{padding:1rem}.st-card .st-num{font-size:1.5rem}.dt{min-width:480px}}
+  @media(max-width:480px){.adm-top h2{font-size:0.9rem}.adm-search{width:100px}.st-grid{grid-template-columns:1fr 1fr;gap:0.6rem}.d-head{flex-direction:column;align-items:flex-start}}
 </style>
-
+</head>
+<body>
 <div class="adm">
-
-  <!-- Overlay (mobile sidebar close) -->
   <div class="adm-overlay" id="adm-ov" onclick="toggleSide()"></div>
-
-  <!-- Sidebar -->
   <aside class="adm-side" id="adm-side">
-    <div class="adm-brand">
-      <h1>SecureApp <span>Admin</span></h1>
-    </div>
+    <div class="adm-brand"><h1>SecureApp <span>Admin</span></h1></div>
     <nav class="adm-nav">
       <div class="adm-nav-label">Overview</div>
       <button class="on" data-tab="dashboard"><span class="ni">◈</span> Dashboard</button>
-
       <div class="adm-nav-label">Management</div>
       <button data-tab="users"><span class="ni">◉</span> Users</button>
-      <button data-tab="permissions"><span class="ni">◇</span> Permissions</button>
-
       <div class="adm-nav-label">Analytics</div>
       <button data-tab="views"><span class="ni">▣</span> Views</button>
       <button data-tab="activity"><span class="ni">▤</span> Activity</button>
       <button data-tab="failed"><span class="ni">⚑</span> Failed Logins</button>
     </nav>
     <div class="adm-side-foot">
-      <div class="pill">
-        <div class="av" id="adm-av">A</div>
-        <div class="uinfo">
-          <span id="adm-un">Admin</span>
-          <small>Administrator</small>
-        </div>
-      </div>
-      <button class="btn-out" onclick="App.logout()">Sign Out</button>
+      <div class="pill"><div class="av">A</div><div class="uinfo"><span>Admin</span><small>Administrator</small></div></div>
+      <button class="btn-out" onclick="doLogout()">Sign Out</button>
     </div>
   </aside>
-
-  <!-- Main -->
   <div class="adm-main">
     <div class="adm-top">
-      <div class="adm-top-left">
-        <button class="adm-menu" onclick="toggleSide()">☰</button>
-        <h2 id="adm-title">Dashboard</h2>
-      </div>
+      <div class="adm-top-left"><button class="adm-menu" onclick="toggleSide()">☰</button><h2 id="adm-title">Dashboard</h2></div>
       <input type="text" class="adm-search" placeholder="Search..." onkeyup="AP.search(this.value)">
     </div>
-
     <div class="adm-body">
 
       <!-- Dashboard -->
       <div id="t-dashboard" class="tp on">
         <div class="st-grid" id="st-row"></div>
         <div class="d-card">
-          <div class="d-head"><h3>Recent Activity</h3></div>
-          <div class="d-body">
-            <table class="dt" id="tb-da">
-              <thead><tr><th>User</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>
-              <tbody></tbody>
-            </table>
+          <div class="d-head">
+            <h3>Recent Activity</h3>
+            <div class="clr-bar">
+              <select id="clr-dash"><option value="today">Today</option><option value="7days">7 Days</option><option value="30days">30 Days</option><option value="all" selected>All</option></select>
+              <button class="abtn dng sm" onclick="AP.clearAll()">Clear All Data</button>
+            </div>
           </div>
+          <div class="d-body"><table class="dt" id="tb-da"><thead><tr><th>User</th><th>Action</th><th>Details</th><th>Time</th></tr></thead><tbody></tbody></table></div>
         </div>
       </div>
 
       <!-- Users -->
       <div id="t-users" class="tp">
         <div class="d-card">
-          <div class="d-head">
-            <h3>All Users</h3>
-            <button class="abtn pri" onclick="AP.showCU()">+ Create User</button>
-          </div>
-          <div class="d-body">
-            <div id="cu-form" class="fi" style="display:none">
-              <input id="cu-u" placeholder="Username">
-              <input id="cu-e" placeholder="Email" type="email">
-              <input id="cu-p" placeholder="Password (min 8)" type="password">
-              <select id="cu-r"><option value="2">User</option><option value="1">Admin</option></select>
-              <button class="abtn pri sm" onclick="AP.createU()">Create</button>
-              <button class="abtn sm" onclick="AP.hideCU()">Cancel</button>
-            </div>
-            <table class="dt" id="tb-us">
-              <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Failed</th><th>Last Login</th><th>Actions</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Permissions -->
-      <div id="t-permissions" class="tp">
-        <div class="d-card">
-          <div class="d-head"><h3>Manage Permissions</h3></div>
-          <div class="d-body">
-            <div class="fi">
-              <select id="pm-u"></select>
-              <select id="pm-p">
-                <option value="home">home</option>
-                <option value="about">about</option>
-                <option value="workspace">workspace</option>
-                <option value="admin">admin</option>
-              </select>
-              <button class="abtn pri sm" onclick="AP.grantP()">Grant</button>
-              <button class="abtn dng sm" onclick="AP.revokeP()">Revoke</button>
-            </div>
-          </div>
-        </div>
-        <div class="d-card">
-          <div class="d-head"><h3>User Permissions</h3></div>
-          <div class="d-body">
-            <table class="dt" id="tb-up">
-              <thead><tr><th>User</th><th>Page</th><th>Granted</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="d-card">
-          <div class="d-head"><h3>Role Permissions</h3></div>
-          <div class="d-body">
-            <table class="dt" id="tb-rp">
-              <thead><tr><th>Role</th><th>Page</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
+          <div class="d-head"><h3>All Users</h3><button class="abtn pri" onclick="AP.showCU()">+ Create User</button></div>
+          <div class="d-body"><div id="cu-form" class="fi" style="display:none"><input id="cu-u" placeholder="Username"><input id="cu-e" placeholder="Email" type="email"><input id="cu-p" placeholder="Password" type="password"><select id="cu-r"><option value="2">User</option><option value="1">Admin</option></select><button class="abtn pri sm" onclick="AP.createU()">Create</button><button class="abtn sm" onclick="AP.hideCU()">Cancel</button></div><table class="dt" id="tb-us"><thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Failed</th><th>Last Login</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
         </div>
       </div>
 
@@ -709,202 +134,126 @@
         <div class="d-card">
           <div class="d-head">
             <h3>View Logs</h3>
-            <select id="vw-p" onchange="AP.load_views()" style="padding:0.4rem 0.65rem;background:rgba(0,0,0,.03);border:1px solid rgba(0,0,0,.08);border-radius:8px;color:#5a4e44;font-size:0.78rem;font-family:inherit;outline:none">
-              <option value="">All Pages</option>
-              <option value="home">home</option>
-              <option value="about">about</option>
-              <option value="workspace">workspace</option>
-              <option value="admin">admin</option>
-            </select>
+            <div class="clr-bar">
+              <select id="vw-p" onchange="AP.load_views()"><option value="">All Pages</option><option value="home">home</option><option value="about">about</option><option value="workspace">workspace</option><option value="admin">admin</option></select>
+              <select id="clr-vw"><option value="today">Today</option><option value="7days">7 Days</option><option value="30days">30 Days</option><option value="all" selected>All</option></select>
+              <button class="abtn dng sm" onclick="AP.clearViews()">Clear Views</button>
+            </div>
           </div>
-          <div class="d-body">
-            <table class="dt" id="tb-vw">
-              <thead><tr><th>Page</th><th>User</th><th>IP</th><th>Device</th><th>Time</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
+          <div class="d-body"><table class="dt" id="tb-vw"><thead><tr><th>Page</th><th>User</th><th>IP</th><th>Device</th><th>Time</th></tr></thead><tbody></tbody></table></div>
         </div>
       </div>
 
       <!-- Activity -->
       <div id="t-activity" class="tp">
         <div class="d-card">
-          <div class="d-head"><h3>Activity Logs</h3></div>
-          <div class="d-body">
-            <table class="dt" id="tb-ac">
-              <thead><tr><th>User</th><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead>
-              <tbody></tbody>
-            </table>
+          <div class="d-head">
+            <h3>Activity Logs</h3>
+            <div class="clr-bar">
+              <select id="clr-ac"><option value="today">Today</option><option value="7days">7 Days</option><option value="30days">30 Days</option><option value="all" selected>All</option></select>
+              <button class="abtn dng sm" onclick="AP.clearActivity()">Clear Activity</button>
+            </div>
           </div>
+          <div class="d-body"><table class="dt" id="tb-ac"><thead><tr><th>User</th><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead><tbody></tbody></table></div>
         </div>
       </div>
 
       <!-- Failed Logins -->
       <div id="t-failed" class="tp">
         <div class="d-card">
-          <div class="d-head"><h3>Failed Login Attempts</h3></div>
-          <div class="d-body">
-            <table class="dt" id="tb-fl">
-              <thead><tr><th>Username</th><th>IP</th><th>Device</th><th>Time</th></tr></thead>
-              <tbody></tbody>
-            </table>
+          <div class="d-head">
+            <h3>Failed Login Attempts</h3>
+            <div class="clr-bar">
+              <select id="clr-fl"><option value="today">Today</option><option value="7days">7 Days</option><option value="30days">30 Days</option><option value="all" selected>All</option></select>
+              <button class="abtn dng sm" onclick="AP.clearFailed()">Clear Failed</button>
+            </div>
           </div>
+          <div class="d-body"><table class="dt" id="tb-fl"><thead><tr><th>Username</th><th>IP</th><th>Device</th><th>Time</th></tr></thead><tbody></tbody></table></div>
         </div>
       </div>
 
     </div>
   </div>
 </div>
-
 <script>
+function doLogout(){
+  fetch('/api/auth/csrf',{credentials:'include'}).then(function(r){return r.json()}).then(function(csrf){
+    var t=csrf.csrfToken||'';var m=document.cookie.match(/csrf_token=([^;]+)/);if(m)t=m[1];
+    return fetch('/api/auth/logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':t}});
+  }).then(function(){window.location.href='/login'}).catch(function(){window.location.href='/login'});
+}
+function toggleSide(){var s=document.getElementById('adm-side');var o=document.getElementById('adm-ov');s.classList.toggle('open');o.classList.toggle('on')}
 (function(){
   var API='/api';
   function ck(){var m=document.cookie.match(/csrf_token=([^;]+)/);return m?m[1]:''}
   async function api(m,u,b){var o={method:m,credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':ck()}};if(b)o.body=JSON.stringify(b);return(await fetch(API+u,o)).json()}
   function ft(d){return d?new Date(d).toLocaleString():'—'}
   function ec(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-
-  /* Sidebar toggle */
-  window.toggleSide=function(){
-    var s=document.getElementById('adm-side');
-    var o=document.getElementById('adm-ov');
-    s.classList.toggle('open');
-    o.classList.toggle('on');
-  };
-
-  /* Tab nav */
-  var tabNames={dashboard:'Dashboard',users:'Users',permissions:'Permissions',views:'View Analytics',activity:'Activity Logs',failed:'Failed Logins'};
-
-  document.querySelectorAll('.adm-nav button[data-tab]').forEach(function(b){
-    b.addEventListener('click',function(){
-      document.querySelectorAll('.adm-nav button').forEach(function(x){x.classList.remove('on')});
-      document.querySelectorAll('.tp').forEach(function(x){x.classList.remove('on')});
-      b.classList.add('on');
-      var t=b.dataset.tab;
-      document.getElementById('t-'+t).classList.add('on');
-      document.getElementById('adm-title').textContent=tabNames[t]||t;
-      AP['load_'+t]();
-      var s=document.getElementById('adm-side');
-      if(s.classList.contains('open')){s.classList.remove('open');document.getElementById('adm-ov').classList.remove('on')}
-    });
-  });
+  var tabNames={dashboard:'Dashboard',users:'Users',views:'View Analytics',activity:'Activity Logs',failed:'Failed Logins'};
+  document.querySelectorAll('.adm-nav button[data-tab]').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.adm-nav button').forEach(function(x){x.classList.remove('on')});document.querySelectorAll('.tp').forEach(function(x){x.classList.remove('on')});b.classList.add('on');var t=b.dataset.tab;document.getElementById('t-'+t).classList.add('on');document.getElementById('adm-title').textContent=tabNames[t]||t;AP['load_'+t]();var s=document.getElementById('adm-side');if(s.classList.contains('open')){s.classList.remove('open');document.getElementById('adm-ov').classList.remove('on')}})});
 
   var AP=window.AP={};
-  var allU=[];
 
-  /* Dashboard */
-  AP.load_dashboard=async function(){
-    var r=await api('GET','/admin/stats');
-    if(!r.data)return;
-    var s=r.data;
-    document.getElementById('st-row').innerHTML=
-      sc('Total Users',s.totalUsers,'w1','◉')+
-      sc('Today Views',s.views.today,'w2','▣')+
-      sc('7-Day Views',s.views.sevenDays,'w3','▣')+
-      sc('Blocked',s.blockedUsers,'w4','⚑');
+  /* ── Dashboard ──────────────────────────────── */
+  AP.load_dashboard=async function(){var r=await api('GET','/admin/stats');if(!r.data)return;var s=r.data;document.getElementById('st-row').innerHTML=sc('Total Users',s.totalUsers,'w1','◉')+sc('Today Views',s.views.today,'w2','▣')+sc('7-Day Views',s.views.sevenDays,'w3','▣')+sc('Blocked',s.blockedUsers,'w4','⚑');var a=await api('GET','/admin/activity?limit=5');if(!a.data)return;document.querySelector('#tb-da tbody').innerHTML=a.data.map(function(x){return '<tr><td class="cu">'+ec(x.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(x.action)+'</span></td><td>'+ec(x.details||'—')+'</td><td class="cm">'+ft(x.created_at)+'</td></tr>'}).join('')||'<tr><td colspan="4"><div class="empty">No activity yet</div></td></tr>'};
 
-    var a=await api('GET','/admin/activity?limit=5');
-    if(!a.data)return;
-    document.querySelector('#tb-da tbody').innerHTML=a.data.map(function(x){
-      return '<tr><td class="cu">'+ec(x.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(x.action)+'</span></td><td>'+ec(x.details||'—')+'</td><td class="cm">'+ft(x.created_at)+'</td></tr>';
-    }).join('')||'<tr><td colspan="4"><div class="empty">No activity yet</div></td></tr>';
-  };
-
-  /* Users */
-  AP.load_users=async function(){
-    var r=await api('GET','/admin/users');
-    if(!r.data)return;
-    allU=r.data;
-    var rl=await api('GET','/admin/roles');
-    window._rl=rl.data||[];
-    var sel=document.getElementById('pm-u');
-    if(sel)sel.innerHTML=r.data.map(function(u){return '<option value="'+u.id+'">'+ec(u.username)+'</option>'}).join('');
-    renderU(r.data);
-  };
-
-  function renderU(data){
-    document.querySelector('#tb-us tbody').innerHTML=data.map(function(u){
-      return '<tr><td class="cu">'+ec(u.username)+'</td><td class="cm">'+ec(u.email)+'</td>'+
-        '<td><select onchange="AP.chRole(\''+u.id+'\',this.value)">'+
-        (window._rl||[]).map(function(r){return '<option value="'+r.id+'"'+(r.name===u.role?' selected':'')+'>'+r.name+'</option>'}).join('')+
-        '</select></td>'+
-        '<td>'+(u.isBlocked?'<span class="bg bg-bl">Blocked</span>':'<span class="bg bg-ok">Active</span>')+'</td>'+
-        '<td class="cm">'+u.failedLoginAttempts+'</td>'+
-        '<td class="cm">'+ft(u.lastLogin)+'</td>'+
-        '<td>'+(u.isBlocked
-          ?'<button class="abtn sm" onclick="AP.unblock(\''+u.id+'\')">Unblock</button>'
-          :'<button class="abtn dng sm" onclick="AP.block(\''+u.id+'\')">Block</button>')+
-        '</td></tr>';
-    }).join('')||'<tr><td colspan="7"><div class="empty">No users</div></td></tr>';
-  }
-
+  /* ── Users ──────────────────────────────────── */
+  AP.load_users=async function(){var r=await api('GET','/admin/users');if(!r.data)return;var rl=await api('GET','/admin/roles');window._rl=rl.data||[];document.querySelector('#tb-us tbody').innerHTML=r.data.map(function(u){return '<tr><td class="cu">'+ec(u.username)+'</td><td class="cm">'+ec(u.email)+'</td><td><select onchange="AP.chRole(\''+u.id+'\',this.value)">'+(window._rl||[]).map(function(r){return '<option value="'+r.id+'"'+(r.name===u.role?' selected':'')+'>'+r.name+'</option>'}).join('')+'</select></td><td>'+(u.isBlocked?'<span class="bg bg-bl">Blocked</span>':'<span class="bg bg-ok">Active</span>')+'</td><td class="cm">'+u.failedLoginAttempts+'</td><td class="cm">'+ft(u.lastLogin)+'</td><td>'+(u.isBlocked?'<button class="abtn sm" onclick="AP.unblock(\''+u.id+'\')">Unblock</button>':'<button class="abtn dng sm" onclick="AP.block(\''+u.id+'\')">Block</button>')+'</td></tr>'}).join('')||'<tr><td colspan="7"><div class="empty">No users</div></td></tr>'};
   AP.showCU=function(){document.getElementById('cu-form').style.display='flex'};
   AP.hideCU=function(){document.getElementById('cu-form').style.display='none'};
-  AP.createU=async function(){
-    var r=await api('POST','/admin/users',{username:document.getElementById('cu-u').value,email:document.getElementById('cu-e').value,password:document.getElementById('cu-p').value,roleId:parseInt(document.getElementById('cu-r').value)});
-    if(!r.success){alert(r.error||'Failed');return}
-    AP.hideCU();AP.load_users();
-  };
+  AP.createU=async function(){var r=await api('POST','/admin/users',{username:document.getElementById('cu-u').value,email:document.getElementById('cu-e').value,password:document.getElementById('cu-p').value,roleId:parseInt(document.getElementById('cu-r').value)});if(!r.success){alert(r.error||'Failed');return}AP.hideCU();AP.load_users()};
   AP.block=async function(id){await api('POST','/admin/users/'+id+'/block',{});AP.load_users()};
   AP.unblock=async function(id){await api('POST','/admin/users/'+id+'/unblock',{});AP.load_users()};
   AP.chRole=async function(id,r){await api('PUT','/admin/users/'+id+'/role',{roleId:parseInt(r)})};
 
-  /* Permissions */
-  AP.load_permissions=async function(){
-    var r=await api('GET','/admin/permissions');
-    if(!r.data)return;
-    document.querySelector('#tb-up tbody').innerHTML=(r.data.userPermissions||[]).map(function(p){
-      return '<tr><td class="cu">'+ec(p.users?.username||p.user_id)+'</td><td><span class="bg bg-ac">'+ec(p.page_slug)+'</span></td><td class="cm">'+ft(p.granted_at)+'</td></tr>';
-    }).join('')||'<tr><td colspan="3"><div class="empty">None</div></td></tr>';
-    document.querySelector('#tb-rp tbody').innerHTML=(r.data.rolePermissions||[]).map(function(p){
-      return '<tr><td class="cu">'+ec(p.roles?.name||p.role_id)+'</td><td><span class="bg bg-ac">'+ec(p.page_slug)+'</span></td></tr>';
-    }).join('')||'<tr><td colspan="2"><div class="empty">None</div></td></tr>';
-  };
-  AP.grantP=async function(){await api('POST','/admin/permissions/grant',{pageSlug:document.getElementById('pm-p').value,userId:document.getElementById('pm-u').value});AP.load_permissions()};
-  AP.revokeP=async function(){await api('POST','/admin/permissions/revoke',{pageSlug:document.getElementById('pm-p').value,userId:document.getElementById('pm-u').value});AP.load_permissions()};
+  /* ── Views ──────────────────────────────────── */
+  AP.load_views=async function(){var pg=document.getElementById('vw-p')?.value||'';var r=await api('GET','/admin/views?page='+pg);if(!r.data)return;document.getElementById('vw-st').innerHTML=sc('Today',r.data.stats.today,'w2','▣')+sc('7 Days',r.data.stats.sevenDays,'w3','▣')+sc('30 Days',r.data.stats.thirtyDays,'w1','▣');document.querySelector('#tb-vw tbody').innerHTML=(r.data.views||[]).map(function(v){return '<tr><td><span class="bg bg-ac">'+ec(v.page_slug)+'</span></td><td class="cu">'+ec(v.users?.username||'—')+'</td><td class="cm">'+ec(v.ip_address||'—')+'</td><td class="cd">'+ec((v.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(v.viewed_at)+'</td></tr>'}).join('')||'<tr><td colspan="5"><div class="empty">No views</div></td></tr>'};
 
-  /* Views */
-  AP.load_views=async function(){
-    var pg=document.getElementById('vw-p')?.value||'';
-    var r=await api('GET','/admin/views?page='+pg);
-    if(!r.data)return;
-    document.getElementById('vw-st').innerHTML=sc('Today',r.data.stats.today,'w2','▣')+sc('7 Days',r.data.stats.sevenDays,'w3','▣')+sc('30 Days',r.data.stats.thirtyDays,'w1','▣');
-    document.querySelector('#tb-vw tbody').innerHTML=(r.data.views||[]).map(function(v){
-      return '<tr><td><span class="bg bg-ac">'+ec(v.page_slug)+'</span></td><td class="cu">'+ec(v.users?.username||'—')+'</td><td class="cm">'+ec(v.ip_address||'—')+'</td><td class="cd">'+ec((v.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(v.viewed_at)+'</td></tr>';
-    }).join('')||'<tr><td colspan="5"><div class="empty">No views yet</div></td></tr>';
+  /* ── Activity ───────────────────────────────── */
+  AP.load_activity=async function(){var r=await api('GET','/admin/activity');if(!r.data)return;document.querySelector('#tb-ac tbody').innerHTML=r.data.map(function(a){return '<tr><td class="cu">'+ec(a.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(a.action)+'</span></td><td>'+ec(a.details||'—')+'</td><td class="cm">'+ec(a.ip_address||'—')+'</td><td class="cm">'+ft(a.created_at)+'</td></tr>'}).join('')||'<tr><td colspan="5"><div class="empty">No activity</div></td></tr>'};
+
+  /* ── Failed ─────────────────────────────────── */
+  AP.load_failed=async function(){var r=await api('GET','/admin/failed-logins');if(!r.data)return;document.querySelector('#tb-fl tbody').innerHTML=r.data.map(function(x){return '<tr><td class="cu">'+ec(x.username)+'</td><td class="cm">'+ec(x.ip_address||'—')+'</td><td class="cd">'+ec((x.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(x.attempted_at)+'</td></tr>'}).join('')||'<tr><td colspan="4"><div class="empty">No failed attempts</div></td></tr>'};
+
+  /* ── Clear functions ────────────────────────── */
+  AP.clearViews=async function(){
+    var range=document.getElementById('clr-vw').value;
+    if(!confirm('Clear views: '+range+'?'))return;
+    var r=await api('DELETE','/admin/clear/views/'+range);
+    if(r.success){alert('Views cleared: '+range);AP.load_views()}else{alert(r.error||'Failed')}
   };
 
-  /* Activity */
-  AP.load_activity=async function(){
-    var r=await api('GET','/admin/activity');
-    if(!r.data)return;
-    document.querySelector('#tb-ac tbody').innerHTML=r.data.map(function(a){
-      return '<tr><td class="cu">'+ec(a.users?.username||'—')+'</td><td><span class="bg bg-ac">'+ec(a.action)+'</span></td><td>'+ec(a.details||'—')+'</td><td class="cm">'+ec(a.ip_address||'—')+'</td><td class="cm">'+ft(a.created_at)+'</td></tr>';
-    }).join('')||'<tr><td colspan="5"><div class="empty">No activity</div></td></tr>';
+  AP.clearActivity=async function(){
+    var range=document.getElementById('clr-ac').value;
+    if(!confirm('Clear activity: '+range+'?'))return;
+    var r=await api('DELETE','/admin/clear/activity/'+range);
+    if(r.success){alert('Activity cleared: '+range);AP.load_activity()}else{alert(r.error||'Failed')}
   };
 
-  /* Failed */
-  AP.load_failed=async function(){
-    var r=await api('GET','/admin/failed-logins');
-    if(!r.data)return;
-    document.querySelector('#tb-fl tbody').innerHTML=r.data.map(function(x){
-      return '<tr><td class="cu">'+ec(x.username)+'</td><td class="cm">'+ec(x.ip_address||'—')+'</td><td class="cd">'+ec((x.device_name||'—').substring(0,50))+'</td><td class="cm">'+ft(x.attempted_at)+'</td></tr>';
-    }).join('')||'<tr><td colspan="4"><div class="empty">No failed attempts</div></td></tr>';
+  AP.clearFailed=async function(){
+    var range=document.getElementById('clr-fl').value;
+    if(!confirm('Clear failed logins: '+range+'?'))return;
+    var r=await api('DELETE','/admin/clear/failed/'+range);
+    if(r.success){alert('Failed logins cleared: '+range);AP.load_failed()}else{alert(r.error||'Failed')}
   };
 
-  /* Search */
-  AP.search=function(q){
-    q=q.toLowerCase();
-    document.querySelectorAll('.dt tbody tr').forEach(function(tr){
-      tr.style.display=tr.textContent.toLowerCase().indexOf(q)>-1?'':'none';
-    });
+  AP.clearAll=async function(){
+    var range=document.getElementById('clr-dash').value;
+    if(!confirm('Clear ALL data ('+range+')? (views + activity + failed logins)'))return;
+    var r=await api('DELETE','/admin/clear/views/'+range);
+    var r2=await api('DELETE','/admin/clear/activity/'+range);
+    var r3=await api('DELETE','/admin/clear/failed/'+range);
+    if(r.success||r2.success||r3.success){alert('All data cleared: '+range);AP.load_dashboard()}
   };
 
-  /* Stat card helper */
-  function sc(l,v,c,ic){
-    return '<div class="st-card"><div class="st-top"><div class="st-ic '+c+'">'+ic+'</div></div><div class="st-num">'+(v||0)+'</div><div class="st-lbl">'+l+'</div></div>';
-  }
+  /* ── Search ─────────────────────────────────── */
+  AP.search=function(q){q=q.toLowerCase();document.querySelectorAll('.dt tbody tr').forEach(function(tr){tr.style.display=tr.textContent.toLowerCase().indexOf(q)>-1?'':'none'})};
+
+  /* ── Helper ─────────────────────────────────── */
+  function sc(l,v,c,ic){return '<div class="st-card"><div class="st-top"><div class="st-ic '+c+'">'+ic+'</div></div><div class="st-num">'+(v||0)+'</div><div class="st-lbl">'+l+'</div></div>'}
 
   AP.load_dashboard();
 })();
 </script>
+</body>
+</html>
