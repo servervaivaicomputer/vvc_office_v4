@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('../database/database');
 const {
   authenticate,
@@ -16,11 +17,11 @@ const {
    AUTH ROUTES
    ═══════════════════════════════════════════════════ */
 
-/* ── CSRF Token ───────────────────────────────────── */
+/* ── CSRF Token (signed cookie) ───────────────────── */
 router.get('/auth/csrf', (req, res) => {
   let token = req.signedCookies?.csrf_token;
   if (!token) {
-    token = require('crypto').randomBytes(32).toString('hex');
+    token = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', token, {
       httpOnly: false,
       signed: true,
@@ -189,7 +190,6 @@ router.get('/admin/stats', authenticateAdmin, async (req, res) => {
    ADMIN — USERS
    ═══════════════════════════════════════════════════ */
 
-/* ── List users ───────────────────────────────────── */
 router.get('/admin/users', authenticateAdmin, async (req, res) => {
   try {
     const users = await db.getAllUsers();
@@ -200,7 +200,6 @@ router.get('/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
-/* ── Create user ──────────────────────────────────── */
 router.post('/admin/users', authenticateAdmin, verifyCsrf, async (req, res) => {
   try {
     const { username, email, password, roleId } = req.body;
@@ -225,7 +224,7 @@ router.post('/admin/users', authenticateAdmin, verifyCsrf, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await db.createUser(username, email, passwordHash, roleId || 2);
 
-    await db.logActivity(req.user.id, 'USER_CREATED', `Created: ${username}`, getClientIp(req), getDeviceName(req));
+    await db.logActivity(req.user.id, 'USER_CREATED', 'Created: ' + username, getClientIp(req), getDeviceName(req));
     res.status(201).json({ success: true, data: user });
   } catch (err) {
     console.error('Create user error:', err);
@@ -233,7 +232,6 @@ router.post('/admin/users', authenticateAdmin, verifyCsrf, async (req, res) => {
   }
 });
 
-/* ── Block user ───────────────────────────────────── */
 router.post('/admin/users/:id/block', authenticateAdmin, verifyCsrf, async (req, res) => {
   try {
     const user = await db.findUserById(req.params.id);
@@ -241,7 +239,7 @@ router.post('/admin/users/:id/block', authenticateAdmin, verifyCsrf, async (req,
     if (user.username === 'admin') return res.status(400).json({ success: false, error: 'Cannot block admin' });
 
     await db.blockUser(req.params.id);
-    await db.logActivity(req.user.id, 'USER_BLOCKED', `Blocked: ${user.username}`, getClientIp(req), getDeviceName(req));
+    await db.logActivity(req.user.id, 'USER_BLOCKED', 'Blocked: ' + user.username, getClientIp(req), getDeviceName(req));
     res.json({ success: true, message: 'User blocked' });
   } catch (err) {
     console.error('Block error:', err);
@@ -249,7 +247,6 @@ router.post('/admin/users/:id/block', authenticateAdmin, verifyCsrf, async (req,
   }
 });
 
-/* ── Unblock user ─────────────────────────────────── */
 router.post('/admin/users/:id/unblock', authenticateAdmin, verifyCsrf, async (req, res) => {
   try {
     const user = await db.findUserById(req.params.id);
@@ -257,7 +254,7 @@ router.post('/admin/users/:id/unblock', authenticateAdmin, verifyCsrf, async (re
 
     await db.unblockUser(req.params.id);
     await db.resetFailedAttempts(req.params.id);
-    await db.logActivity(req.user.id, 'USER_UNBLOCKED', `Unblocked: ${user.username}`, getClientIp(req), getDeviceName(req));
+    await db.logActivity(req.user.id, 'USER_UNBLOCKED', 'Unblocked: ' + user.username, getClientIp(req), getDeviceName(req));
     res.json({ success: true, message: 'User unblocked' });
   } catch (err) {
     console.error('Unblock error:', err);
@@ -265,7 +262,6 @@ router.post('/admin/users/:id/unblock', authenticateAdmin, verifyCsrf, async (re
   }
 });
 
-/* ── Change role ──────────────────────────────────── */
 router.put('/admin/users/:id/role', authenticateAdmin, verifyCsrf, async (req, res) => {
   try {
     const { roleId } = req.body;
@@ -274,7 +270,7 @@ router.put('/admin/users/:id/role', authenticateAdmin, verifyCsrf, async (req, r
     if (user.username === 'admin') return res.status(400).json({ success: false, error: 'Cannot change admin role' });
 
     await db.updateUserRole(req.params.id, roleId);
-    await db.logActivity(req.user.id, 'ROLE_CHANGED', `Changed role: ${user.username}`, getClientIp(req), getDeviceName(req));
+    await db.logActivity(req.user.id, 'ROLE_CHANGED', 'Changed role: ' + user.username, getClientIp(req), getDeviceName(req));
     res.json({ success: true, message: 'Role updated' });
   } catch (err) {
     console.error('Role error:', err);
@@ -282,7 +278,6 @@ router.put('/admin/users/:id/role', authenticateAdmin, verifyCsrf, async (req, r
   }
 });
 
-/* ── Roles list ───────────────────────────────────── */
 router.get('/admin/roles', authenticateAdmin, async (req, res) => {
   try {
     const roles = await db.getRoles();
