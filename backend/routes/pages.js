@@ -21,9 +21,10 @@ function errorPage(status, title, msg) {
 /* ═══════════════════════════════════════════════════
    GET /page/:slug
 
-   Permission:
-   - username "admin" → ALL pages
+   Permission rule:
+   - username "admin" → ALL pages including admin
    - username != "admin" → ALL pages EXCEPT admin
+   - No database permission check needed
    ═══════════════════════════════════════════════════ */
 router.get('/:slug', async (req, res) => {
   try {
@@ -74,7 +75,7 @@ router.get('/:slug', async (req, res) => {
       return res.redirect(302, FRONTEND_URL + '/login');
     }
 
-    /* ── Permission check (code, no database) ── */
+    /* ── Permission check (simple: no database) ── */
     if (slug === 'admin' && user.username !== 'admin') {
       return res.status(403).send(errorPage(403, 'Access Denied', 'Admin access only'));
     }
