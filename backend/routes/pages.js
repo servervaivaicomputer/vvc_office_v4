@@ -20,8 +20,11 @@ function errorPage(status, title, msg) {
 
 /* ═══════════════════════════════════════════════════
    GET /page/:slug
-   Browser directly access করে — full HTML serve করে
-   Auth না থাকলে /login এ redirect করে
+
+   Permission rule:
+   - username "admin" → ALL pages including admin
+   - username != "admin" → ALL pages EXCEPT admin
+   - No database permission check needed
    ═══════════════════════════════════════════════════ */
 router.get('/:slug', async (req, res) => {
   try {
@@ -72,10 +75,9 @@ router.get('/:slug', async (req, res) => {
       return res.redirect(302, FRONTEND_URL + '/login');
     }
 
-    /* ── Permission check ── */
-    var allowed = await db.checkPagePermission(user.id, slug);
-    if (!allowed) {
-      return res.status(403).send(errorPage(403, 'Access Denied', 'You do not have permission to view this page'));
+    /* ── Permission check (simple: no database) ── */
+    if (slug === 'admin' && user.username !== 'admin') {
+      return res.status(403).send(errorPage(403, 'Access Denied', 'Admin access only'));
     }
 
     /* ── Log ── */
